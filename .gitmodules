@@ -1,0 +1,3 @@
+[submodule "external/demucs.cpp"]
+	path = external/demucs.cpp
+	url = https://github.com/sevagh/demucs.cpp.git
