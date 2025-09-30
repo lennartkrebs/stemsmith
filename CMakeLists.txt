@@ -6,14 +6,15 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL "4.0")
     set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 endif()
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 add_subdirectory(external/demucs.cpp)
 
 add_library(${PROJECT_NAME}
-        src/separation_engine.cpp
-        main.cpp
+        src/server.cpp
+        include/job_queue.h
+        src/job_queue.cpp
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -24,10 +25,19 @@ target_include_directories(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME} PUBLIC demucs.cpp.lib)
 
-# OpenMP (demucs.cpp uses Eigen+OpenMP for speed)
-find_package(OpenMP)
-if (OpenMP_CXX_FOUND)
-    target_link_libraries(${PROJECT_NAME} PRIVATE OpenMP::OpenMP_CXX)
+option(ENABLE_OPENMP "Enable OpenMP for faster inference" ON)
+if (ENABLE_OPENMP)
+    if(APPLE)
+        set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp")
+        set(OpenMP_CXX_LIB_NAMES "omp")
+        set(OpenMP_omp_LIBRARY "/opt/homebrew/opt/libomp/lib/libomp.dylib")  # ARM Mac
+    endif()
+
+    # OpenMP (demucs.cpp uses Eigen+OpenMP for speed)
+    find_package(OpenMP)
+    if (OpenMP_CXX_FOUND)
+        target_link_libraries(${PROJECT_NAME} PRIVATE OpenMP::OpenMP_CXX)
+    endif()
 endif()
 
 # Testing
