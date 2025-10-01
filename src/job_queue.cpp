@@ -10,7 +10,7 @@ job_queue::job_queue(size_t max_jobs)
     : workers_(max_jobs)
     , semaphore_(0)
 {
-    for (size_t i = 0; i < workers_.size(); ++i)
+    for (size_t i = 0; i < max_jobs; ++i)
     {
         workers_.emplace_back([this]{ worker_thread(); });
     }

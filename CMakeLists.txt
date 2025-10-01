@@ -2,6 +2,15 @@ cmake_minimum_required(VERSION 3.16)
 set(PROJECT_NAME stemsmith)
 project(stemsmith LANGUAGES CXX)
 
+# Find ASIO (header-only, so you can use FetchContent)
+include(FetchContent)
+FetchContent_Declare(
+        asio
+        GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
+        GIT_TAG asio-1-28-0
+)
+FetchContent_MakeAvailable(asio)
+
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "4.0")
     set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 endif()
@@ -21,9 +30,12 @@ target_include_directories(${PROJECT_NAME}
         PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty
+        ${asio_SOURCE_DIR}/asio/include
 )
 
-target_link_libraries(${PROJECT_NAME} PUBLIC demucs.cpp.lib)
+target_link_libraries(${PROJECT_NAME}
+        PUBLIC
+        demucs.cpp.lib)
 
 option(ENABLE_OPENMP "Enable OpenMP for faster inference" ON)
 if (ENABLE_OPENMP)

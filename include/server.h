@@ -1,12 +1,14 @@
 #pragma once
 
 #include <string>
+#include <thread>
 #include <crow/include/crow_all.h>
-#include "job_queue.h"
+#include "nlohmann/json.hpp"
 
 namespace stemsmith {
 
 class job_queue;
+struct job;
 
 struct server_config
 {
@@ -18,7 +20,11 @@ struct server_config
 class server
 {
 public:
-    server(const server_config& config, std::shared_ptr<job_queue> job_queue);
+    server(server_config config, std::shared_ptr<job_queue> job_queue);
+    ~server();
+
+    void run();
+    void stop();
 
 private:
     struct client
@@ -27,7 +33,21 @@ private:
         std::set<std::string> subscribed_jobs;
     };
 
-    
+    static std::string make_job_id() ;
+
+    void wire_callbacks();
+    void routes();
+    void broadcast_job_update(const nlohmann::json& message, const std::string& job_id);
+
+    server_config config_;
+    std::shared_ptr<job_queue> job_queue_;
+    crow::SimpleApp app_;
+
+    std::mutex server_mutex_;
+    std::map<std::string, std::shared_ptr<job>> jobs_;
+    std::set<std::unique_ptr<client>> clients_;
+
+    std::thread job_broadcast_thread_;
 };
 
 } // namespace stemsmith
