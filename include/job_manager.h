@@ -1,10 +1,12 @@
 #pragma once
 
 #include "job_queue.h"
+#include "job_builder.h"
+
 #include <map>
 #include <shared_mutex>
 #include <functional>
-#include <string_view>
+#include <atomic>
 
 namespace stemsmith {
 
@@ -16,39 +18,29 @@ public:
     explicit job_manager(size_t worker_threads = std::thread::hardware_concurrency());
     ~job_manager();
 
-    // Job management
-    std::string submit_job(
-        std::string_view input_path,
-        std::string_view output_path,
-        std::string_view model_name = "htdemucs",
-        std::string_view mode = "fast");
+    static job_builder create_job() { return {}; };
 
-    job_ptr get_job(std::string_view job_id) const;
-    std::vector<job_ptr> get_all_jobs() const;
-    std::vector<job_ptr> get_jobs_by_status(std::string_view status) const;
-    bool cancel_job(std::string_view job_id);
+    std::string submit_job(const job_parameters& parameters);
 
-    void on_job_submitted(job_update_callback callback);
-    void on_job_progress(job_update_callback callback);
-    void on_job_completed(job_update_callback callback);
-    void on_job_failed(job_update_callback callback);
+    job_ptr get_job(const std::string& id) const;
+    std::vector<job_ptr> list_jobs() const;
+
+    // Subscribe to job updates (progress, complete, error). Returns a subscription id.
+    uint64_t subscribe(job_update_callback cb);
+    void unsubscribe(uint64_t subscription_id);
 
 private:
-    std::string generate_job_id();
-    void setup_queue_callbacks();
-    void notify_callbacks(const std::vector<job_update_callback>& callbacks, const job_ptr& job);
-
     std::unique_ptr<job_queue> queue_;
     mutable std::shared_mutex jobs_mutex_;
     std::map<std::string, job_ptr> jobs_;
     std::atomic<uint64_t> job_counter_{0};
 
-    // Callback storage
-    std::vector<job_update_callback> on_submitted_callbacks_;
-    std::vector<job_update_callback> on_progress_callbacks_;
-    std::vector<job_update_callback> on_completed_callbacks_;
-    std::vector<job_update_callback> on_failed_callbacks_;
-    mutable std::shared_mutex callbacks_mutex_;
+    // listeners
+    mutable std::shared_mutex listeners_mutex_;
+    std::map<uint64_t, job_update_callback> listeners_;
+    std::atomic<uint64_t> listener_counter_{0};
+
+    void notify_listeners(const job_ptr& j) const;
 };
 
 } // namespace stemsmith

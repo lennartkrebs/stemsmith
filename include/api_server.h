@@ -7,7 +7,7 @@
 
 namespace stemsmith {
 
-class job_queue;
+class job_manager;
 struct job;
 
 struct server_config
@@ -20,7 +20,7 @@ struct server_config
 class api_server
 {
 public:
-    api_server(server_config config, std::shared_ptr<job_queue> job_queue);
+    api_server(server_config config, std::shared_ptr<job_manager> job_manager);
     ~api_server();
 
     void run();
@@ -34,21 +34,21 @@ private:
         std::set<std::string> subscribed_jobs;
     };
 
-    static std::string make_job_id() ;
+    static std::string make_job_id();
 
     void wire_callbacks();
     void routes();
     void broadcast_job_update(const nlohmann::json& message, const std::string& job_id);
 
     server_config config_;
-    std::shared_ptr<job_queue> job_queue_;
+    std::shared_ptr<job_manager> job_manager_;
     crow::SimpleApp app_;
 
     std::mutex server_mutex_;
-    std::map<std::string, std::shared_ptr<job>> jobs_;
     std::set<std::unique_ptr<client>> clients_;
 
     std::thread server_thread_;
+    std::atomic<bool> running_{false};
 };
 
 } // namespace stemsmith

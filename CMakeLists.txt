@@ -11,9 +11,9 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(asio)
 
-if(CMAKE_VERSION VERSION_GREATER_EQUAL "4.0")
+if (CMAKE_VERSION VERSION_GREATER_EQUAL "4.0")
     set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
-endif()
+endif ()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -24,6 +24,7 @@ add_library(${PROJECT_NAME}
         src/api_server.cpp
         src/job_queue.cpp
         src/job_manager.cpp
+        include/job_builder.h
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -39,28 +40,60 @@ target_link_libraries(${PROJECT_NAME}
 
 option(ENABLE_OPENMP "Enable OpenMP for faster inference" ON)
 if (ENABLE_OPENMP)
-    if(APPLE)
+    if (APPLE)
         set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp")
         set(OpenMP_CXX_LIB_NAMES "omp")
         set(OpenMP_omp_LIBRARY "/opt/homebrew/opt/libomp/lib/libomp.dylib")  # ARM Mac
-    endif()
+    endif ()
 
     # OpenMP (demucs.cpp uses Eigen+OpenMP for speed)
     find_package(OpenMP)
     if (OpenMP_CXX_FOUND)
         target_link_libraries(${PROJECT_NAME} PRIVATE OpenMP::OpenMP_CXX)
-    endif()
+    endif ()
+endif ()
+
+enable_testing()
+
+include(FetchContent)
+# Only fetch googletest if no gtest targets already exist (some subprojects may provide googletest)
+if (NOT TARGET gtest AND NOT TARGET gtest_main AND NOT TARGET GTest::gtest AND NOT TARGET GTest::gtest_main)
+    FetchContent_Declare(
+            googletest
+            GIT_REPOSITORY https://github.com/google/googletest.git
+            GIT_TAG v1.17.0
+    )
+
+    FetchContent_MakeAvailable(googletest)
+else()
+    message(STATUS "Using existing GoogleTest targets provided by a subproject/vendor")
 endif()
 
-# Testing
-add_executable(${PROJECT_NAME}_test main.cpp)
+file(GLOB TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp")
+add_executable(${PROJECT_NAME}_test ${TEST_SOURCES})
+
+# Resolve the correct gtest_main target name (namespaced or plain)
+if (TARGET GTest::gtest_main)
+    set(GTEST_MAIN_TARGET GTest::gtest_main)
+elseif (TARGET gtest_main)
+    set(GTEST_MAIN_TARGET gtest_main)
+elseif (TARGET GTest::gtest)
+    set(GTEST_MAIN_TARGET GTest::gtest)
+elseif (TARGET gtest)
+    set(GTEST_MAIN_TARGET gtest)
+else()
+    message(FATAL_ERROR "GoogleTest targets not found. Ensure googletest is available or fetched.")
+endif()
 
 target_link_libraries(${PROJECT_NAME}_test
         PRIVATE
         ${PROJECT_NAME}
+        ${GTEST_MAIN_TARGET}
 )
 
 target_include_directories(${PROJECT_NAME}_test
         PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
+
+add_test(NAME stemsmith-test COMMAND ${PROJECT_NAME}_test)

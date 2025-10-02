@@ -1,4 +1,5 @@
 #include "job_queue.h"
+#include "job_builder.h"
 
 #include <filesystem>
 #include <fstream>
@@ -74,8 +75,8 @@ void job_queue::run(const std::shared_ptr<job>& job) const
 
     try
     {
-        job->status = "running";
-        job->progress = 0.0f;
+        job->state.store(job_state::running, std::memory_order_release);
+        job->progress.store(0.0f, std::memory_order_release);
 
         fs::create_directories(job->output_path);
         const std::vector<std::string> stem_names = {"vocals", "drums", "bass", "other"};
@@ -89,33 +90,24 @@ void job_queue::run(const std::shared_ptr<job>& job) const
             job->stems.push_back(output_file);
             job->progress += 0.25f;
 
-            if (on_progress)
-            {
-                on_progress(*job);
-            }
-
+            job->progress += 0.25f;
             std::ofstream ofs(output_file);
             ofs << "Simulated " << stem << " stem data for " << job->input_path << "\n";
+            ofs << "Simulated " << stem << " stem data for " << job->input_path << "\n";
 
-            ofs.close();
+            float prev = job->progress.load(std::memory_order_acquire);
+            float next = prev + 1.0f / stem_names.size();
+            if (on_progress) on_progress(*job);
         }
-
-        job->status = "completed";
-        job->progress = 1.0f;
-
-        if (on_complete)
-        {
-            on_complete(*job);
-        }
+            if (on_progress) on_progress(*job);
+        job->progress.store(1.0f, std::memory_order_release);
+        if (on_complete) on_complete(*job);
     }
-    catch (std::exception& e)
-    {
-        job->status = "error";
+    catch (std::exception& e) {
+        if (on_complete) on_complete(*job);
+        job->state.store(job_state::failed, std::memory_order_release);
         job->error_message = e.what();
-        if (on_error)
-        {
-            on_error(*job);
-        }
+        if (on_error) on_error(*job);
     }
 }
 
@@ -129,6 +121,5 @@ void job_queue::join_all()
         }
     }
 }
-
 
 } // namespace stemsmith

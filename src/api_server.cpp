@@ -4,14 +4,18 @@
 #include <memory>
 #include <algorithm>
 
+#include "job_manager.h"
+#include "job_builder.h"
+
 namespace stemsmith {
 
-api_server::api_server(server_config config, std::shared_ptr<job_queue> job_queue)
+api_server::api_server(server_config config, std::shared_ptr<job_manager> job_manager)
     : config_(std::move(config))
-    , job_queue_(std::move(job_queue))
+    , job_manager_(std::move(job_manager))
 {
     // Let's get rid of the info spam for now
     app_.loglevel(crow::LogLevel::Warning);
+
     wire_callbacks();
     routes();
 }
@@ -52,42 +56,6 @@ std::string api_server::make_job_id()
 
 void api_server::wire_callbacks()
 {
-    if (!job_queue_)
-    {
-        return;
-    }
-
-    using nlohmann::json;
-
-    job_queue_->on_progress = [this](const job& job)
-    {
-        const json j = {{"type", "progress"},
-                  {"job_id", job.id},
-                  {"status", job.status},
-                  {"progress", job.progress.load()},
-                  {"error_message", job.error_message}};;
-        broadcast_job_update(j, job.id);
-    };
-
-    job_queue_->on_error = [this](const job& job)
-    {
-        const json j = {{"type", "error"},
-                  {"job_id", job.id},
-                  {"status", job.status},
-                  {"progress", job.progress.load()},
-                  {"error_message", job.error_message}};
-        broadcast_job_update(j, job.id);
-    };
-
-    job_queue_->on_complete = [this](const job& job)
-    {
-        const json j = {{"type", "complete"},
-                  {"job_id", job.id},
-                  {"status", job.status},
-                  {"progress", job.progress.load()},
-                  {"stems", job.stems}};
-        broadcast_job_update(j, job.id);
-    };
 }
 
 void api_server::routes()
@@ -107,36 +75,27 @@ void api_server::routes()
         try
         {
             const auto body = json::parse(req.body);
-            auto input_path = body.value("input_path", "");
-            auto output_path = body.value("output_path", "");
-            auto model_name = body.value("model_name", "htdemucs");
-            auto mode = body.value("mode", "fast");
+            job_parameters params;
+            params.input_path = body.value("input_path", "");
+            params.output_path = body.value("output_path", "");
+            params.model = body.value("model_name", "htdemucs");
+            params.mode = body.value("mode", "fast");
 
-            if (input_path.empty() || output_path.empty())
+            if (params.input_path.empty() || params.output_path.empty())
             {
                 return crow::response(400, json({{"error", "Missing required fields"}}).dump());
             }
 
-            const auto job = std::make_shared<stemsmith::job>();
-            job->id = make_job_id();
-            job->input_path = input_path;
-            job->output_path = output_path;
-            job->model_name = model_name;
-            job->mode = mode;
-
-            {
-                std::lock_guard lock(server_mutex_);
-                jobs_[job->id] = job;
+            std::string job_id;
+            try {
+                job_id = job_manager_->submit_job(params);
+            } catch (std::exception& e) {
+                return crow::response(500, json({{"error", e.what()}}).dump());
             }
-
-            if (job_queue_)
-            {
-                job_queue_->push(job);
-            }
-
+            auto job = job_manager_->get_job(job_id);
             return crow::response(200, json({
                 {"job_id", job->id},
-                {"status", job->status}
+                {"status", job->status_string()}
             }).dump());
         }
         catch (json::parse_error&)
@@ -150,12 +109,11 @@ void api_server::routes()
         using nlohmann::json;
         json jobs_array = json::array();
 
-        std::lock_guard lock(server_mutex_);
-        for (const auto& job : jobs_ | std::views::values)
+        for (const auto& job : job_manager_->list_jobs())
         {
             jobs_array.push_back({
                 {"id", job->id},
-                {"status", job->status},
+                {"status", job->status_string()},
                 {"progress", job->progress.load()},
                 {"input_path", job->input_path},
                 {"output_path", job->output_path}
@@ -169,18 +127,15 @@ void api_server::routes()
     CROW_ROUTE(app_, "/api/jobs/<string>").methods(crow::HTTPMethod::Get)([this](const std::string& job_id) {
         using nlohmann::json;
 
-        std::lock_guard lock(server_mutex_);
-        auto it = jobs_.find(job_id);
-
-        if (it == jobs_.end())
+        auto job = job_manager_->get_job(job_id);
+        if (!job)
         {
             return crow::response(404, json({{"error", "Job not found"}}).dump());
         }
 
-        const auto& job = it->second;
         json response = {
             {"id", job->id},
-            {"status", job->status},
+            {"status", job->status_string()},
             {"progress", job->progress.load()},
             {"input_path", job->input_path},
             {"output_path", job->output_path},
@@ -261,3 +216,4 @@ void api_server::broadcast_job_update(const nlohmann::json& message, const std::
 }
 
 } // namespace stemsmith
+

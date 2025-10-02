@@ -10,19 +10,7 @@
 
 namespace stemsmith {
 
-struct job
-{
-    std::string id;
-    std::string input_path;
-    std::string output_path;
-    std::string model_name;
-    std::string mode; // "hq" or "fast"
-
-    std::string status = "queued"; // "queued", "processing", "completed", "failed"
-    std::atomic<float> progress{0.0f}; // 0.0 to 1.0
-    std::string error_message;
-    std::vector<std::string> stems;
-};
+struct job;
 
 class job_queue
 {
@@ -32,7 +20,6 @@ public:
     explicit job_queue(size_t max_jobs = std::thread::hardware_concurrency());
     ~job_queue();
 
-    // Disable copy and move semantics
     job_queue(const job_queue&) = delete;
     job_queue& operator=(const job_queue&) = delete;
     job_queue(job_queue&&) = delete;
