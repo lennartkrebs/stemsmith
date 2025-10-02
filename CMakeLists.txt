@@ -21,9 +21,9 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 add_subdirectory(external/demucs.cpp)
 
 add_library(${PROJECT_NAME}
-        src/server.cpp
-        include/job_queue.h
+        src/api_server.cpp
         src/job_queue.cpp
+        src/job_manager.cpp
 )
 
 target_include_directories(${PROJECT_NAME}

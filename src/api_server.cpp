@@ -1,4 +1,4 @@
-#include "server.h"
+#include "api_server.h"
 #include "job_queue.h"
 #include <utility>
 #include <memory>
@@ -6,7 +6,7 @@
 
 namespace stemsmith {
 
-server::server(server_config config, std::shared_ptr<job_queue> job_queue)
+api_server::api_server(server_config config, std::shared_ptr<job_queue> job_queue)
     : config_(std::move(config))
     , job_queue_(std::move(job_queue))
 {
@@ -16,36 +16,41 @@ server::server(server_config config, std::shared_ptr<job_queue> job_queue)
     routes();
 }
 
-server::~server()
+api_server::~api_server()
 {
     stop();
 }
 
-void server::run()
+void api_server::run()
 {
-    job_broadcast_thread_ = std::thread([this]()
+    server_thread_ = std::thread([this]()
     {
         app_.bindaddr(config_.bind_address).port(config_.port).concurrency(config_.http_thread_count).run();
     });
 }
 
-void server::stop()
+void api_server::stop()
 {
     app_.stop();
 
-    if (job_broadcast_thread_.joinable())
+    if (server_thread_.joinable())
     {
-        job_broadcast_thread_.join();
+        server_thread_.join();
     }
 }
 
-std::string server::make_job_id()
+bool api_server::is_running() const
+{
+    return server_thread_.joinable();
+}
+
+std::string api_server::make_job_id()
 {
     static std::atomic<uint64_t> counter{0};
     return "job_" + std::to_string(counter.fetch_add(1, std::memory_order_relaxed));
 }
 
-void server::wire_callbacks()
+void api_server::wire_callbacks()
 {
     if (!job_queue_)
     {
@@ -85,10 +90,10 @@ void server::wire_callbacks()
     };
 }
 
-void server::routes()
+void api_server::routes()
 {
     CROW_ROUTE(app_, "/")([]() {
-        return "StemSmith Live Server is running.";
+        return "Stemsmith Live Server is running.";
     });
 
     CROW_ROUTE(app_, "/health").methods(crow::HTTPMethod::Get)([]
@@ -196,18 +201,6 @@ void server::routes()
         return crow::response(200, response.dump());
     });
 
-    // POST /api/upload - Handle file upload
-    CROW_ROUTE(app_, "/api/upload").methods(crow::HTTPMethod::Post)([this](const crow::request& req) {
-        using nlohmann::json;
-
-        // For multipart form data, you'd need to parse it properly
-        // This is a simplified version
-        return crow::response(200, json({
-            {"message", "File upload endpoint - not fully implemented"},
-            {"note", "Use /api/jobs with file path instead"}
-        }).dump());
-    });
-
     // WebSocket endpoint
     CROW_WEBSOCKET_ROUTE(app_, "/ws")
         .onopen([this](crow::websocket::connection& conn) {
@@ -255,7 +248,7 @@ void server::routes()
         });
 }
 
-void server::broadcast_job_update(const nlohmann::json& message, const std::string& job_id)
+void api_server::broadcast_job_update(const nlohmann::json& message, const std::string& job_id)
 {
     std::lock_guard lock(server_mutex_);
     for (const auto& client : clients_)

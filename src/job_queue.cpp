@@ -6,7 +6,7 @@
 
 namespace stemsmith {
 
-job_queue::job_queue(size_t max_jobs)
+job_queue::job_queue(const size_t max_jobs)
     : workers_(max_jobs)
     , semaphore_(0)
 {
@@ -80,6 +80,7 @@ void job_queue::run(const std::shared_ptr<job>& job) const
         fs::create_directories(job->output_path);
         const std::vector<std::string> stem_names = {"vocals", "drums", "bass", "other"};
         job->stems.clear();
+
         for (const auto& stem : stem_names)
         {
             std::string output_file = fs::path(job->output_path) / (fs::path(job->input_path).stem().string() + "_" + stem + ".wav");
@@ -111,7 +112,6 @@ void job_queue::run(const std::shared_ptr<job>& job) const
     {
         job->status = "error";
         job->error_message = e.what();
-
         if (on_error)
         {
             on_error(*job);

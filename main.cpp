@@ -1,262 +1,148 @@
-#include <server.h>
-#include <job_queue.h>
 #include <iostream>
+#include <memory>
 #include <thread>
 #include <chrono>
-#include <sstream>
-#include <fstream>
+#include <atomic>
+#include <condition_variable>
+#include "job_queue.h"
 #include <filesystem>
+#include <api_server.h>
 
-// Simple HTTP client using system curl
-std::string http_request(const std::string& method, const std::string& url,
-                         const std::string& data = "",
-                         const std::string& content_type = "application/json") {
-    std::stringstream cmd;
-    cmd << "curl -s -X " << method << " ";
+int main()
+{
+    namespace fs = std::filesystem;
 
-    if (!data.empty()) {
-        cmd << "-H 'Content-Type: " << content_type << "' ";
-        cmd << "-d '" << data << "' ";
-    }
+    // Create a temporary directory for testing
+    std::string temp_dir = fs::temp_directory_path() / "stemsmith_test";
+    fs::create_directories(temp_dir);
 
-    cmd << url << " 2>/dev/null";
-
-    char buffer[128];
-    std::string result;
-    FILE* pipe = popen(cmd.str().c_str(), "r");
-    if (pipe) {
-        while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
-            result += buffer;
-        }
-        pclose(pipe);
-    }
-    return result;
-}
-
-void test_health_check(const std::string& base_url) {
-    std::cout << "\n[TEST] Health Check Endpoint\n";
-    std::cout << "==============================\n";
-
-    auto response = http_request("GET", base_url + "/health");
-    std::cout << "Response: " << response << "\n";
-}
-
-void test_job_submission(const std::string& base_url, std::string& job_id) {
-    std::cout << "\n[TEST] Job Submission\n";
-    std::cout << "======================\n";
-
-    // Create test audio file
-    std::filesystem::create_directories("/tmp/test_audio");
-    std::ofstream test_file("/tmp/test_audio/sample.wav");
-    test_file << "Fake audio data for testing";
-    test_file.close();
-
-    // Test valid job submission
-    std::string valid_job = R"({
-        "input_path": "/tmp/test_audio/sample.wav",
-        "output_path": "/tmp/test_stems/",
-        "model_name": "htdemucs",
-        "mode": "fast"
-    })";
-
-    auto response = http_request("POST", base_url + "/api/jobs", valid_job);
-    std::cout << "Valid job response: " << response << "\n";
-
-    // Extract job ID from response
-    try {
-        auto json = nlohmann::json::parse(response);
-        if (json.contains("job_id")) {
-            job_id = json["job_id"];
-            std::cout << "Created job ID: " << job_id << "\n";
-        }
-    } catch (...) {
-        std::cout << "Failed to parse job response\n";
-    }
-
-    // Test invalid job (missing required fields)
-    std::cout << "\nTesting invalid job submission...\n";
-    std::string invalid_job = R"({
-        "input_path": "/tmp/test_audio/sample.wav"
-    })";
-
-    response = http_request("POST", base_url + "/api/jobs", invalid_job);
-    std::cout << "Invalid job response: " << response << "\n";
-}
-
-void test_job_status(const std::string& base_url, const std::string& job_id) {
-    std::cout << "\n[TEST] Job Status Endpoint\n";
-    std::cout << "===========================\n";
-
-    if (!job_id.empty()) {
-        auto response = http_request("GET", base_url + "/api/jobs/" + job_id);
-        std::cout << "Job " << job_id << " status: " << response << "\n";
-    }
-
-    // Test non-existent job
-    std::cout << "\nTesting non-existent job...\n";
-    auto response = http_request("GET", base_url + "/api/jobs/non_existent_id");
-    std::cout << "Non-existent job response: " << response << "\n";
-}
-
-void test_all_jobs_listing(const std::string& base_url) {
-    std::cout << "\n[TEST] List All Jobs\n";
-    std::cout << "=====================\n";
-
-    auto response = http_request("GET", base_url + "/api/jobs");
-    std::cout << "All jobs: " << response << "\n";
-}
-
-void test_file_upload(const std::string& base_url) {
-    std::cout << "\n[TEST] File Upload Endpoint\n";
-    std::cout << "============================\n";
-
-    // Create a test file
-    std::filesystem::create_directories("/tmp/upload_test");
-    std::ofstream test_file("/tmp/upload_test/test.wav");
-    test_file << "Test audio content";
-    test_file.close();
-
-    // Use curl with form data for file upload
-    std::stringstream cmd;
-    cmd << "curl -s -X POST ";
-    cmd << "-F 'file=@/tmp/upload_test/test.wav' ";
-    cmd << "-F 'model_name=htdemucs' ";
-    cmd << "-F 'mode=fast' ";
-    cmd << base_url << "/api/upload 2>/dev/null";
-
-    char buffer[128];
-    std::string result;
-    FILE* pipe = popen(cmd.str().c_str(), "r");
-    if (pipe) {
-        while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
-            result += buffer;
-        }
-        pclose(pipe);
-    }
-
-    std::cout << "File upload response: " << result << "\n";
-}
-
-void test_websocket_connection(const std::string& ws_url) {
-    std::cout << "\n[TEST] WebSocket Connection (Manual)\n";
-    std::cout << "=====================================\n";
-    std::cout << "To test WebSocket, run in another terminal:\n";
-    std::cout << "wscat -c " << ws_url << "/ws\n";
-    std::cout << "Then send: {\"action\":\"subscribe\",\"job_id\":\"<job_id>\"}\n";
-}
-
-void run_automated_tests(const std::string& base_url, const std::string& ws_url) {
-    std::cout << "\n========================================\n";
-    std::cout << "  AUTOMATED TEST SUITE FOR STEMSMITH\n";
-    std::cout << "========================================\n";
-
-    std::string job_id;
-
-    // Run tests in sequence
-    test_health_check(base_url);
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-    test_job_submission(base_url, job_id);
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-    test_job_status(base_url, job_id);
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-    test_all_jobs_listing(base_url);
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-    test_file_upload(base_url);
-
-    test_websocket_connection(ws_url);
-
-    std::cout << "\n========================================\n";
-    std::cout << "  TEST SUITE COMPLETED\n";
-    std::cout << "========================================\n";
-}
-
-int main() {
-    using namespace stemsmith;
-
-    // Create job queue with 2 worker threads
-    const auto queue = std::make_shared<job_queue>(2);
-
-    // Configure and start server
-    server_config config;
-    config.bind_address = "127.0.0.1";
+    auto config = stemsmith::server_config();
     config.port = 8080;
-    config.http_thread_count = 4;
+    config.bind_address = "127.0.0.1";
 
-    server srv(config, queue);
+    const auto queue = std::make_shared<stemsmith::job_queue>(4);
 
-    // Start server in background thread
-    std::thread server_thread([&srv]() {
-        srv.run();
-    });
+    std::cout << "Starting StemSmith Server..." << std::endl;
+    auto server = std::make_unique<stemsmith::api_server>(config, queue);
+    server->run();
 
-    // Wait for server to start
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
-    std::string base_url = "http://" + config.bind_address + ":" +
-                          std::to_string(config.port);
-    std::string ws_url = "ws://" + config.bind_address + ":" +
-                        std::to_string(config.port);
+    // Testing single job submission
+    std::cout << "\nTesting single job submission" << std::endl;
+    std::cout << "---------------------------------" << std::endl;
 
-    std::cout << "\n╔════════════════════════════════════════╗\n";
-    std::cout << "║     STEMSMITH SERVER TEST SUITE        ║\n";
-    std::cout << "╚════════════════════════════════════════╝\n";
-    std::cout << "\nServer running on " << base_url << "\n";
-    std::cout << "WebSocket endpoint: " << ws_url << "/ws\n";
+    auto job1 = std::make_shared<stemsmith::job>();
+    job1->id = "test_job_001";
+    job1->input_path = temp_dir + "/test_input.wav";
+    job1->output_path = temp_dir + "/output_001";
+    job1->model_name = "htdemucs";
+    job1->mode = "hq";
 
-    std::cout << "\nOptions:\n";
-    std::cout << "  1. Run automated tests\n";
-    std::cout << "  2. Submit custom job\n";
-    std::cout << "  3. Monitor server (manual testing)\n";
-    std::cout << "  q. Quit\n";
-    std::cout << "\nChoice: ";
+    // Create dummy input file
+    std::ofstream(job1->input_path) << "test audio data";
 
-    std::string choice;
-    while (std::getline(std::cin, choice)) {
-        if (choice == "1") {
-            run_automated_tests(base_url, ws_url);
+    // Variables to track callback execution
+    std::atomic<bool> job_completed{false};
+    std::mutex cv_mutex;
+    std::condition_variable cv;
+    int progress_count = 0;
+
+    // Set up callbacks
+    queue->on_progress = [&progress_count, &cv_mutex](const stemsmith::job& job)
+    {
+        std::lock_guard<std::mutex> lock(cv_mutex);
+        progress_count++;
+        std::cout << "[PROGRESS] Job " << job.id
+            << " - Status: " << job.status
+            << " - Progress: " << (job.progress.load() * 100) << "%\n";
+    };
+
+    queue->on_complete = [&job_completed, &cv](const stemsmith::job& job)
+    {
+        std::cout << "[COMPLETE] Job " << job.id
+            << " - Status: " << job.status
+            << " - Progress: " << (job.progress.load() * 100) << "%\n";
+        std::cout << "Generated stems:\n";
+        for (const auto& stem : job.stems)
+        {
+            std::cout << "  - " << stem << "\n";
         }
-        else if (choice == "2") {
-            std::cout << "\nEnter input file path: ";
-            std::string input_path;
-            std::getline(std::cin, input_path);
+        job_completed = true;
+        cv.notify_one();
+    };
 
-            auto custom_job = std::make_shared<job>();
-            custom_job->id = "custom_" + std::to_string(std::chrono::system_clock::now().time_since_epoch().count());
-            custom_job->input_path = input_path;
-            custom_job->output_path = "/tmp/custom_stems/";
-            custom_job->model_name = "htdemucs";
-            custom_job->mode = "fast";
+    queue->on_error = [](const stemsmith::job& job)
+    {
+        std::cout << "[ERROR] Job " << job.id
+            << " - Error: " << job.error_message << "\n";
+    };
 
-            std::cout << "Submitting job " << custom_job->id << "...\n";
-            queue->push(custom_job);
-        }
-        else if (choice == "3") {
-            std::cout << "\nServer is running. You can test manually using:\n";
-            std::cout << "  curl " << base_url << "/health\n";
-            std::cout << "  curl -X POST " << base_url << "/api/jobs -H 'Content-Type: application/json' -d '{...}'\n";
-            std::cout << "\nPress Enter to return to menu...\n";
-            std::cin.get();
-        }
-        else if (choice == "q" || choice == "Q") {
-            break;
-        }
+    queue->push(job1);
 
-        std::cout << "\nOptions: 1=Tests, 2=Custom Job, 3=Monitor, q=Quit\n";
-        std::cout << "Choice: ";
+    // Wait for job completion with timeout
+    {
+        std::unique_lock<std::mutex> lock(cv_mutex);
+        if (cv.wait_for(lock, std::chrono::seconds(10), [&job_completed]
+        {
+            return job_completed.load();
+        }))
+        {
+            std::cout << "\n✅ Job completed successfully!\n";
+            std::cout << "Progress callbacks fired: " << progress_count << " times\n";
+        }
+        else
+        {
+            std::cout << "\n❌ Job timed out after 10 seconds\n";
+        }
     }
 
-    std::cout << "\nShutting down server...\n";
-    srv.stop();
+    // Submit multiple jobs to test concurrent processing
+    std::cout << "\n\nTesting multiple concurrent jobs\n";
+    std::cout << "---------------------------------\n";
 
-    if (server_thread.joinable()) {
-        server_thread.join();
+    std::atomic<int> completed_jobs{0};
+    const int num_jobs = 3;
+
+    for (int i = 0; i < num_jobs; i++)
+    {
+        auto job = std::make_shared<stemsmith::job>();
+        job->id = "batch_job_" + std::to_string(i + 1);
+        job->input_path = "/path/to/input/song" + std::to_string(i + 1) + ".wav";
+        job->output_path = "/path/to/output/batch/";
+        job->model_name = "htdemucs";
+        job->mode = "fast";
+
+        queue->push(job);
+        std::cout << "Submitted: " << job->id << "\n";
     }
 
-    std::cout << "Server stopped. Goodbye!\n";
+    // Redefine on_complete to count completed jobs
+    queue->on_complete = [&completed_jobs, &cv](const stemsmith::job& job)
+    {
+        std::cout << "[BATCH COMPLETE] " << job.id << " finished\n";
+        completed_jobs++;
+        cv.notify_one();
+    };
+
+    // Wait for all jobs to complete
+    {
+        std::unique_lock<std::mutex> lock(cv_mutex);
+        if (cv.wait_for(lock, std::chrono::seconds(20), [&completed_jobs, num_jobs]
+        {
+            return completed_jobs.load() >= num_jobs;
+        }))
+        {
+            std::cout << "\n✅ All " << num_jobs << " jobs completed!\n";
+        }
+        else
+        {
+            std::cout << "\n❌ Not all jobs completed. Finished: "
+                << completed_jobs.load() << "/" << num_jobs << "\n";
+        }
+    }
+
+    std::cout << "\nTest completed. Shutting down...\n";
 
     return 0;
 }

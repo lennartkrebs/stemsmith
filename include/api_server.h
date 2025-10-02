@@ -17,14 +17,15 @@ struct server_config
     int http_thread_count = 4;
 };
 
-class server
+class api_server
 {
 public:
-    server(server_config config, std::shared_ptr<job_queue> job_queue);
-    ~server();
+    api_server(server_config config, std::shared_ptr<job_queue> job_queue);
+    ~api_server();
 
     void run();
     void stop();
+    [[nodiscard]] bool is_running() const;
 
 private:
     struct client
@@ -47,7 +48,7 @@ private:
     std::map<std::string, std::shared_ptr<job>> jobs_;
     std::set<std::unique_ptr<client>> clients_;
 
-    std::thread job_broadcast_thread_;
+    std::thread server_thread_;
 };
 
 } // namespace stemsmith
