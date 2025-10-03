@@ -57,7 +57,7 @@ enable_testing()
 
 include(FetchContent)
 # Only fetch googletest if no gtest targets already exist (some subprojects may provide googletest)
-if (NOT TARGET gtest AND NOT TARGET gtest_main AND NOT TARGET GTest::gtest AND NOT TARGET GTest::gtest_main)
+if (NOT TARGET GTest::gtest)
     FetchContent_Declare(
             googletest
             GIT_REPOSITORY https://github.com/google/googletest.git
@@ -72,23 +72,10 @@ endif()
 file(GLOB TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp")
 add_executable(${PROJECT_NAME}_test ${TEST_SOURCES})
 
-# Resolve the correct gtest_main target name (namespaced or plain)
-if (TARGET GTest::gtest_main)
-    set(GTEST_MAIN_TARGET GTest::gtest_main)
-elseif (TARGET gtest_main)
-    set(GTEST_MAIN_TARGET gtest_main)
-elseif (TARGET GTest::gtest)
-    set(GTEST_MAIN_TARGET GTest::gtest)
-elseif (TARGET gtest)
-    set(GTEST_MAIN_TARGET gtest)
-else()
-    message(FATAL_ERROR "GoogleTest targets not found. Ensure googletest is available or fetched.")
-endif()
-
 target_link_libraries(${PROJECT_NAME}_test
         PRIVATE
         ${PROJECT_NAME}
-        ${GTEST_MAIN_TARGET}
+        GTest::gtest
 )
 
 target_include_directories(${PROJECT_NAME}_test

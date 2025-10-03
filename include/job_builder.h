@@ -11,19 +11,6 @@ namespace stemsmith
 // New strongly typed job state enum
 enum class job_state : uint8_t { queued, running, completed, failed, canceled };
 
-inline std::string to_string(job_state s)
-{
-    switch (s)
-    {
-        case job_state::queued: return "queued";
-        case job_state::running: return "running";
-        case job_state::completed: return "completed";
-        case job_state::failed: return "failed";
-        case job_state::canceled: return "canceled";
-    }
-    return "unknown";
-}
-
 struct job_parameters
 {
     std::string input_path;
@@ -53,7 +40,7 @@ struct job_builder {
         return *this;
     }
 
-    [[nodiscard]] job_parameters build() const
+    job_parameters build() const
     {
         if (params_.input_path.empty())
         {
@@ -72,6 +59,7 @@ private:
 
 struct job
 {
+
     std::string id;
     std::string input_path;
     std::string output_path;
@@ -84,6 +72,20 @@ struct job
     std::vector<std::string> stems;
 
     [[nodiscard]] std::string status_string() const { return to_string(state.load(std::memory_order_acquire)); }
+
+private:
+    static constexpr std::string to_string(job_state s)
+    {
+        switch (s)
+        {
+        case job_state::queued: return "queued";
+        case job_state::running: return "running";
+        case job_state::completed: return "completed";
+        case job_state::failed: return "failed";
+        case job_state::canceled: return "canceled";
+        }
+        return "unknown";
+    }
 };
 
 }
