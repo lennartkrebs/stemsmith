@@ -24,7 +24,6 @@ add_library(${PROJECT_NAME}
         src/api_server.cpp
         src/job_queue.cpp
         src/job_manager.cpp
-        include/job_builder.h
 )
 
 target_include_directories(${PROJECT_NAME}

@@ -6,12 +6,7 @@
 
 namespace {
 std::string make_job_id(uint64_t counter) {
-    using clock = std::chrono::system_clock;
-    auto now = clock::now();
-    auto secs = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
-    std::ostringstream oss;
-    oss << "job_" << secs << '_' << counter;
-    return oss.str();
+    return "job_id_" + std::to_string(counter);
 }
 }
 
@@ -20,18 +15,28 @@ namespace stemsmith {
 job_manager::job_manager(size_t worker_threads)
     : queue_(std::make_unique<job_queue>(worker_threads))
 {
-    // Wire queue callbacks to notify subscribers about job updates
-    queue_->on_progress = [this](const job& j) {
-        auto ptr = get_job(j.id);
-        if (ptr) notify_listeners(ptr);
+    queue_->on_progress = [this](const job& j)
+    {
+        if (const auto ptr = get_job(j.id))
+        {
+            notify_listeners(ptr);
+        }
     };
-    queue_->on_complete = [this](const job& j) {
-        auto ptr = get_job(j.id);
-        if (ptr) notify_listeners(ptr);
+
+    queue_->on_complete = [this](const job& j)
+    {
+        if (const auto ptr = get_job(j.id))
+        {
+            notify_listeners(ptr);
+        }
     };
-    queue_->on_error = [this](const job& j) {
-        auto ptr = get_job(j.id);
-        if (ptr) notify_listeners(ptr);
+
+    queue_->on_error = [this](const job& j)
+    {
+        if (const auto ptr = get_job(j.id))
+        {
+            notify_listeners(ptr);
+        }
     };
 }
 
@@ -39,11 +44,14 @@ job_manager::~job_manager() = default;
 
 std::string job_manager::submit_job(const job_parameters& parameters)
 {
-    if (parameters.input_path.empty()) {
-        throw std::invalid_argument("input_path required");
+    if (parameters.input_path.empty())
+    {
+        throw std::invalid_argument("Input path is required");
     }
-    if (parameters.output_path.empty()) {
-        throw std::invalid_argument("output_path required");
+
+    if (parameters.output_path.empty())
+    {
+        throw std::invalid_argument("Output path is required");
     }
 
     const auto id = make_job_id(job_counter_.fetch_add(1, std::memory_order_relaxed));
@@ -94,9 +102,9 @@ void job_manager::unsubscribe(uint64_t subscription_id) {
 
 void job_manager::notify_listeners(const job_ptr& j) const {
     std::shared_lock lk(listeners_mutex_);
-    for (const auto& val : listeners_ | std::views::values) {
+    for (const auto& callback : listeners_ | std::views::values) {
         try {
-            if (val) val(j);
+            if (callback) callback(j);
         } catch (...) {
             // swallow exceptions from listeners
         }
