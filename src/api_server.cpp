@@ -48,12 +48,6 @@ bool api_server::is_running() const
     return server_thread_.joinable();
 }
 
-std::string api_server::make_job_id()
-{
-    static std::atomic<uint64_t> counter{0};
-    return "job_" + std::to_string(counter.fetch_add(1, std::memory_order_relaxed));
-}
-
 void api_server::wire_callbacks()
 {
 }
@@ -75,20 +69,22 @@ void api_server::routes()
         try
         {
             const auto body = json::parse(req.body);
-            job_parameters params;
-            params.input_path = body.value("input_path", "");
-            params.output_path = body.value("output_path", "");
-            params.model = body.value("model_name", "htdemucs");
-            params.mode = body.value("mode", "fast");
+            job_builder builder;
+            const auto parameters = builder
+                .with_input(body.value("input_path", ""))
+                .with_output(body.value("output_path", ""))
+                .with_model(body.value("model", "htdemucs"))
+                .with_mode(body.value("mode", "fast"))
+                .build();
 
-            if (params.input_path.empty() || params.output_path.empty())
+            if (parameters.input_path.empty() || parameters.output_path.empty())
             {
                 return crow::response(400, json({{"error", "Missing required fields"}}).dump());
             }
 
             std::string job_id;
             try {
-                job_id = job_manager_->submit_job(params);
+                job_id = job_manager_->submit_job(parameters);
             } catch (std::exception& e) {
                 return crow::response(500, json({{"error", e.what()}}).dump());
             }

@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.16)
 set(PROJECT_NAME stemsmith)
 project(stemsmith LANGUAGES CXX)
 
-# Find ASIO (header-only, so you can use FetchContent)
 include(FetchContent)
 FetchContent_Declare(
         asio

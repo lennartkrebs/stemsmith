@@ -15,27 +15,9 @@ namespace stemsmith {
 job_manager::job_manager(size_t worker_threads)
     : queue_(std::make_unique<job_queue>(worker_threads))
 {
-    queue_->on_progress = [this](const job& j)
-    {
-        if (const auto ptr = get_job(j.id))
-        {
-            notify_listeners(ptr);
-        }
-    };
-
-    queue_->on_complete = [this](const job& j)
-    {
-        if (const auto ptr = get_job(j.id))
-        {
-            notify_listeners(ptr);
-        }
-    };
-
-    queue_->on_error = [this](const job& j)
-    {
-        if (const auto ptr = get_job(j.id))
-        {
-            notify_listeners(ptr);
+    queue_->progress_callback = [this](const job& j) {
+        if (const auto job = get_job(j.id)) {
+            notify_listeners(job);
         }
     };
 }
@@ -89,7 +71,7 @@ std::vector<job_manager::job_ptr> job_manager::list_jobs() const {
 }
 
 uint64_t job_manager::subscribe(job_update_callback cb) {
-    const auto id = listener_counter_.fetch_add(1, std::memory_order_relaxed) + 1;
+    const auto id = listener_counter_.fetch_add(1, std::memory_order_relaxed);
     std::unique_lock lk(listeners_mutex_);
     listeners_.emplace(id, std::move(cb));
     return id;

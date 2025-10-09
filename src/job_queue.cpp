@@ -8,9 +8,8 @@
 namespace stemsmith {
 
 job_queue::job_queue(const size_t max_jobs)
-    : workers_(max_jobs)
-    , semaphore_(0)
 {
+    workers_.reserve(max_jobs);
     for (size_t i = 0; i < max_jobs; ++i)
     {
         workers_.emplace_back([this]{ worker_thread(); });
@@ -19,14 +18,14 @@ job_queue::job_queue(const size_t max_jobs)
 
 job_queue::~job_queue()
 {
-    stop_ = true;
-    semaphore_.release(static_cast<int>(workers_.size()));
+    stop_.store(true, std::memory_order_release);
+    cv_.notify_all();
     join_all();
 }
 
 void job_queue::push(const std::shared_ptr<job>& job)
 {
-    if (stop_.load(std::memory_order_acquire))
+    if (stop_.load(std::memory_order_acquire) || !job)
     {
         return;
     }
@@ -34,30 +33,32 @@ void job_queue::push(const std::shared_ptr<job>& job)
     {
         std::lock_guard<std::mutex> lock(queue_mutex_);
         job_queue_.emplace_back(job);
+
+        notify(*job);
     }
 
-    semaphore_.release(1);
+    cv_.notify_one();
 }
 
 void job_queue::worker_thread()
 {
-    for (;;)
+    while (true)
     {
-        semaphore_.acquire();
-
-        if (stop_.load(std::memory_order_acquire))
-        {
-            break;
-        }
-
         std::shared_ptr<job> job;
         {
-            std::lock_guard<std::mutex> lock(queue_mutex_);
-            if (!job_queue_.empty())
+            std::unique_lock<std::mutex> lock(queue_mutex_);
+            cv_.wait(lock, [this]
             {
-                job = job_queue_.front();
-                job_queue_.erase(job_queue_.begin());
+                return stop_.load(std::memory_order_acquire) || !job_queue_.empty();
+            });
+
+            if (stop_.load(std::memory_order_acquire))
+            {
+                break;
             }
+
+            job = job_queue_.front();
+            job_queue_.erase(job_queue_.begin());
         }
 
         run(job);
@@ -67,16 +68,12 @@ void job_queue::worker_thread()
 void job_queue::run(const std::shared_ptr<job>& job) const
 {
     namespace fs = std::filesystem;
-
-    if (!job)
-    {
-        return;
-    }
+    if (!job) return;
 
     try
     {
         job->state.store(job_state::running, std::memory_order_release);
-        job->progress.store(0.0f, std::memory_order_release);
+        notify(*job);
 
         fs::create_directories(job->output_path);
         const std::vector<std::string> stem_names = {"vocals", "drums", "bass", "other"};
@@ -90,24 +87,30 @@ void job_queue::run(const std::shared_ptr<job>& job) const
             job->stems.push_back(output_file);
             job->progress += 0.25f;
 
-            job->progress += 0.25f;
             std::ofstream ofs(output_file);
             ofs << "Simulated " << stem << " stem data for " << job->input_path << "\n";
-            ofs << "Simulated " << stem << " stem data for " << job->input_path << "\n";
+            ofs.close();
 
-            float prev = job->progress.load(std::memory_order_acquire);
-            float next = prev + 1.0f / stem_names.size();
-            if (on_progress) on_progress(*job);
+            notify(*job);
         }
-            if (on_progress) on_progress(*job);
-        job->progress.store(1.0f, std::memory_order_release);
-        if (on_complete) on_complete(*job);
+
+        job->state.store(job_state::completed, std::memory_order_release);
+
+        notify(*job);
     }
     catch (std::exception& e) {
-        if (on_complete) on_complete(*job);
         job->state.store(job_state::failed, std::memory_order_release);
         job->error_message = e.what();
-        if (on_error) on_error(*job);
+
+        notify(*job);
+    }
+}
+
+void job_queue::notify(const job& job) const
+{
+    if (progress_callback)
+    {
+        progress_callback(job);
     }
 }
 

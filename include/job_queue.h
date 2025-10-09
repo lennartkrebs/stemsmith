@@ -27,20 +27,18 @@ public:
 
     void push(const std::shared_ptr<job>& job);
 
-    progress_callback_t on_progress;
-    progress_callback_t on_error;
-    progress_callback_t on_complete;
-
+    progress_callback_t progress_callback;
 private:
+    void notify(const job& job) const;
     void worker_thread();
     void run(const std::shared_ptr<job>& job) const;
     void join_all();
 
-    std::mutex queue_mutex_;
-    std::vector<std::shared_ptr<job>> job_queue_;
     std::vector<std::thread> workers_;
+    std::vector<std::shared_ptr<job>> job_queue_;
+    std::mutex queue_mutex_;
+    std::condition_variable cv_;
     std::atomic<bool> stop_{false};
-    std::counting_semaphore<std::numeric_limits<int>::max()> semaphore_;
 };
 
 } // namespace stemsmith

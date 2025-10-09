@@ -34,8 +34,6 @@ private:
         std::set<std::string> subscribed_jobs;
     };
 
-    static std::string make_job_id();
-
     void wire_callbacks();
     void routes();
     void broadcast_job_update(const nlohmann::json& message, const std::string& job_id);

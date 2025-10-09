@@ -105,22 +105,27 @@ json get_job_json(int port, const std::string& id) {
 }
 
 TEST(api_server, start_server_and_submit_jobs) {
-    // Pick a semi-random port in high range to avoid conflicts
-    int base_port = 20000 + (int)(std::chrono::steady_clock::now().time_since_epoch().count() % 10000);
+    int base_port = 20000 + static_cast<int>(std::chrono::steady_clock::now().time_since_epoch().count() % 10000);
 
-    auto mgr = std::make_shared<job_manager>(3);
+    auto mgr = std::make_shared<job_manager>(8);
     server_config cfg;
     cfg.bind_address = "127.0.0.1";
     cfg.port = base_port;
-    cfg.http_thread_count = 2;
+    cfg.http_thread_count = 4;
     api_server server(cfg, mgr);
     server.run();
 
     ASSERT_TRUE(wait_for_health(base_port)) << "Server did not become healthy";
 
     // Submit multiple jobs via HTTP
-    const int job_count = 2; // keep runtime low
+    const int job_count = 4; // keep runtime low
     std::vector<std::string> job_ids;
+
+    const auto id = mgr->subscribe([](const std::shared_ptr<job>& job)
+    {
+        if (!job) return;
+        std::cout << "[JOB UPDATE] ID: " << job->id << " Status: " << job->status_string() << " Progress: " << job->progress.load() << " on thread: " << std::this_thread::get_id() << std::endl;
+    });
 
     for (int i = 0; i < job_count; ++i) {
         json payload = {
@@ -137,6 +142,9 @@ TEST(api_server, start_server_and_submit_jobs) {
         EXPECT_EQ(body["status"], "queued");
         job_ids.push_back(body["job_id"].get<std::string>());
     }
+
+    //std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+    //mgr->unsubscribe(id);
 
     // Poll until all jobs completed
     auto start = std::chrono::steady_clock::now();
