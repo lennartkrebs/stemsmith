@@ -2,6 +2,13 @@ cmake_minimum_required(VERSION 3.16)
 set(PROJECT_NAME stemsmith)
 project(stemsmith LANGUAGES CXX)
 
+if (CMAKE_VERSION VERSION_GREATER_EQUAL "4.0")
+    set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+endif ()
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 include(FetchContent)
 FetchContent_Declare(
         asio
@@ -10,31 +17,32 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(asio)
 
-if (CMAKE_VERSION VERSION_GREATER_EQUAL "4.0")
-    set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
-endif ()
-
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+FetchContent_Declare(
+        libsamplerate
+        GIT_REPOSITORY https://github.com/libsndfile/libsamplerate.git
+        GIT_TAG 0.2.2
+)
+FetchContent_MakeAvailable(libsamplerate)
 
 add_subdirectory(external/demucs.cpp)
 
-add_library(${PROJECT_NAME}
-        src/api_server.cpp
-        src/job_queue.cpp
-        src/job_manager.cpp
-)
+file(GLOB SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
+add_library(${PROJECT_NAME} ${SOURCES})
 
 target_include_directories(${PROJECT_NAME}
         PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty
         ${asio_SOURCE_DIR}/asio/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/external/demucs.cpp/vendor/libnyquist/include
 )
 
 target_link_libraries(${PROJECT_NAME}
         PUBLIC
-        demucs.cpp.lib)
+        demucs.cpp.lib
+        libnyquist
+        samplerate
+)
 
 option(ENABLE_OPENMP "Enable OpenMP for faster inference" ON)
 if (ENABLE_OPENMP)
@@ -53,7 +61,6 @@ endif ()
 
 enable_testing()
 
-include(FetchContent)
 # Only fetch googletest if no gtest targets already exist (some subprojects may provide googletest)
 if (NOT TARGET GTest::gtest)
     FetchContent_Declare(
