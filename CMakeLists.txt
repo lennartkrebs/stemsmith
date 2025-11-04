@@ -6,7 +6,8 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL "4.0")
     set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 endif ()
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 include(FetchContent)
@@ -34,6 +35,7 @@ target_include_directories(${PROJECT_NAME}
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty
         ${asio_SOURCE_DIR}/asio/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/external/demucs.cpp/src
         ${CMAKE_CURRENT_SOURCE_DIR}/external/demucs.cpp/vendor/libnyquist/include
 )
 
@@ -50,12 +52,16 @@ if (ENABLE_OPENMP)
         set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp")
         set(OpenMP_CXX_LIB_NAMES "omp")
         set(OpenMP_omp_LIBRARY "/opt/homebrew/opt/libomp/lib/libomp.dylib")  # ARM Mac
+        set(OpenMP_CXX_INCLUDE_DIR "/opt/homebrew/opt/libomp/include")
     endif ()
 
     # OpenMP (demucs.cpp uses Eigen+OpenMP for speed)
     find_package(OpenMP)
     if (OpenMP_CXX_FOUND)
-        target_link_libraries(${PROJECT_NAME} PRIVATE OpenMP::OpenMP_CXX)
+        target_link_libraries(${PROJECT_NAME} PUBLIC OpenMP::OpenMP_CXX)
+        if (OpenMP_CXX_INCLUDE_DIR)
+            target_include_directories(${PROJECT_NAME} PRIVATE ${OpenMP_CXX_INCLUDE_DIR})
+        endif ()
     endif ()
 endif ()
 
@@ -74,7 +80,7 @@ else()
     message(STATUS "Using existing GoogleTest targets provided by a subproject/vendor")
 endif()
 
-file(GLOB TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp")
+file(GLOB_RECURSE TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp")
 add_executable(${PROJECT_NAME}_test ${TEST_SOURCES})
 
 target_link_libraries(${PROJECT_NAME}_test
@@ -86,6 +92,11 @@ target_link_libraries(${PROJECT_NAME}_test
 target_include_directories(${PROJECT_NAME}_test
         PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_compile_definitions(${PROJECT_NAME}_test
+        PRIVATE
+        STEMSMITH_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures"
 )
 
 add_test(NAME stemsmith-test COMMAND ${PROJECT_NAME}_test)
