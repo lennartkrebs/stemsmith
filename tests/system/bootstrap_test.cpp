@@ -4,7 +4,7 @@
 
 namespace
 {
-TEST(BootstrapTest, DemucsDependenciesAreReady)
+TEST(bootstrap_test, demucs_dependencies_ready)
 {
     // Guard rail: verify the Demucs vendor tree links before project tests run.
     EXPECT_TRUE(stemsmith::demucs_dependencies_ready())

@@ -29,6 +29,9 @@ struct model_profile
 const model_profile& lookup_profile(model_profile_id id);
 const model_profile& lookup_profile(std::string_view key);
 
+/**
+ * @brief Configuration for a single separation job.
+ */
 struct job_config
 {
     model_profile_id profile{model_profile_id::balanced_six_stem};

@@ -17,7 +17,7 @@ std::filesystem::path fixture_path(const std::string& relative)
 
 namespace stemsmith
 {
-TEST(JobConfigTest, DefaultsAreApplied)
+TEST(job_config_test, defaults_are_correct)
 {
     const job_config config;
 
@@ -32,7 +32,7 @@ TEST(JobConfigTest, DefaultsAreApplied)
     EXPECT_EQ(config.cache_root, std::filesystem::path{"build/cache"});
 }
 
-TEST(JobConfigTest, LoadsOverridesFromJson)
+TEST(job_config_test, loads_overrides_from_file)
 {
     setenv("STEMSMITH_CACHE", "/tmp/stemsmith", 1);
 
@@ -48,7 +48,7 @@ TEST(JobConfigTest, LoadsOverridesFromJson)
     EXPECT_EQ(config.cache_root, std::filesystem::path{"/tmp/stemsmith/models"});
 }
 
-TEST(JobConfigTest, ResolvesProfileStemsWhenFilterEmpty)
+TEST(job_config_test, resolves_all_stems_when_no_filter)
 {
     const auto result =
         job_config::from_file(fixture_path("job_config/four_stem.json"));
@@ -62,7 +62,7 @@ TEST(JobConfigTest, ResolvesProfileStemsWhenFilterEmpty)
     EXPECT_EQ(config.resolved_stems(), expected);
 }
 
-TEST(JobConfigTest, RejectsInvalidConfig)
+TEST(job_config_test, rejects_invalid_stems_entry)
 {
     const auto result =
         job_config::from_file(fixture_path("job_config/invalid.json"));
@@ -70,7 +70,7 @@ TEST(JobConfigTest, RejectsInvalidConfig)
     EXPECT_NE(result.error().find("stems entries must be strings"), std::string::npos);
 }
 
-TEST(JobConfigTest, RejectsUnsupportedStemNames)
+TEST(job_config_test, rejects_unsupported_stem)
 {
     const auto result =
         job_config::from_file(fixture_path("job_config/unsupported.json"));
@@ -78,7 +78,7 @@ TEST(JobConfigTest, RejectsUnsupportedStemNames)
     EXPECT_NE(result.error().find("Unsupported stem"), std::string::npos);
 }
 
-TEST(JobConfigTest, IgnoresUnknownKeys)
+TEST(job_config_test, ignores_unknown_keys)
 {
     const auto result =
         job_config::from_file(fixture_path("job_config/unknown_key.json"));
@@ -90,7 +90,7 @@ TEST(JobConfigTest, IgnoresUnknownKeys)
     EXPECT_EQ(cache_root, std::filesystem::path{"build/cache"});
 }
 
-TEST(JobConfigTest, RejectsUnknownModel)
+TEST(job_config_test, rejects_unknown_model)
 {
     const auto result = job_config::from_file(fixture_path("job_config/unknown_model.json"));
     ASSERT_FALSE(result.has_value());
