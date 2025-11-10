@@ -33,7 +33,7 @@ TEST(worker_pool_test, process_jobs_and_emit_events)
     std::mutex processed_mutex;
     std::size_t completed = 0;
 
-    worker_pool pool(
+    const worker_pool pool(
         1,
         [&](const job_descriptor& job, const std::atomic_bool& stop_flag) {
             ASSERT_FALSE(stop_flag.load());
@@ -151,4 +151,41 @@ TEST(worker_pool_test, cancels_pending_jobs_on_shutdown)
     ASSERT_TRUE(failed->error.has_value());
     EXPECT_NE(failed->error->find("stop requested"), std::string::npos);
 }
+
+TEST(worker_pool_test, rejects_enqueue_after_shutdown)
+{
+    int processed{0};
+    std::mutex processed_mutex;
+    std::condition_variable processed_cv;
+
+    const worker_pool pool(
+        1,
+        [&](const job_descriptor&, const std::atomic_bool& stop_flag) {
+            EXPECT_FALSE(stop_flag.load());
+            {
+                std::lock_guard lock(processed_mutex);
+                processed = 1;
+            }
+            processed_cv.notify_all();
+        });
+
+    const auto first_id = pool.enqueue(make_job("/music/first.wav"));
+    EXPECT_EQ(first_id, 0U);
+
+    {
+        std::unique_lock lock(processed_mutex);
+        ASSERT_TRUE(processed_cv.wait_for(lock,
+            std::chrono::milliseconds(200),
+            [&] { return processed == 1; }));
+    }
+
+    pool.shutdown();
+
+    EXPECT_EQ(processed, 1);
+    EXPECT_TRUE(pool.is_shutdown());
+
+    const auto second_id = pool.enqueue(make_job("/music/second.wav"));
+    EXPECT_EQ(second_id, static_cast<std::size_t>(-1));
+}
+
 } // namespace stemsmith

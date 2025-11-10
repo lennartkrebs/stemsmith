@@ -1,9 +1,9 @@
 #include "stemsmith/job_config.h"
 
+#include "stemsmith/json_utils.h"
+
 #include <algorithm>
 #include <array>
-#include <cctype>
-#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <initializer_list>
@@ -77,39 +77,6 @@ std::string expand_env(const std::string& input)
     }
 
     return output;
-}
-
-std::expected<nlohmann::json, std::string> load_document(const std::filesystem::path& path)
-{
-    std::ifstream input(path);
-    if (!input)
-    {
-        return std::unexpected("Unable to open config file: " +
-                               path.string());
-    }
-
-    if (const auto extension = path.extension().string(); extension != ".json")
-    {
-        return std::unexpected("Unsupported config format: " + extension);
-    }
-
-    nlohmann::json doc;
-    try
-    {
-        input >> doc;
-    }
-    catch (const nlohmann::json::exception& err)
-    {
-        return std::unexpected(std::string{"JSON parse error: "} +
-                               err.what());
-    }
-    catch (const std::exception& err)
-    {
-        return std::unexpected(std::string{"Failed to read config: "} +
-                               err.what());
-    }
-
-    return doc;
 }
 
 std::expected<std::vector<std::string>, std::string>
@@ -217,7 +184,7 @@ const model_profile& lookup_profile(std::string_view key)
 
 std::expected<job_config, std::string> job_config::from_file(const std::filesystem::path& path)
 {
-    const auto doc_result = load_document(path);
+    const auto doc_result = utils::load_json_file(path);
     if (!doc_result)
     {
         return std::unexpected(doc_result.error());

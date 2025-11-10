@@ -1,0 +1,27 @@
+{
+    "format_version": 1,
+    "source": {
+        "provider": "huggingface",
+        "dataset": "Retrobear/demucs.cpp",
+        "resolved_at": "2024-07-05T00:00:00Z",
+        "url_template": "https://huggingface.co/datasets/Retrobear/demucs.cpp/resolve/main/{filename}"
+    },
+    "models": [
+        {
+            "profile": "balanced-four-stem",
+            "model_profile_id": "balanced_four_stem",
+            "filename": "ggml-model-htdemucs-4s-f16.bin",
+            "size_bytes": 83994361,
+            "sha256": "72b17c42d308982ddb5069bc3bf48b81a5aac4cb6516e4366c0fa7cef6df0064",
+            "description": "Demucs v4 ht-demucs 4-stem GGML weights"
+        },
+        {
+            "profile": "balanced-six-stem",
+            "model_profile_id": "balanced_six_stem",
+            "filename": "ggml-model-htdemucs-6s-f16.bin",
+            "size_bytes": 54855129,
+            "sha256": "09704f4ceae204e56e77d5eefd6ac71d7275be81fd507e6913371d59abcee856",
+            "description": "Demucs v4 ht-demucs 6-stem GGML weights"
+        }
+    ]
+}

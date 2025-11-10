@@ -39,6 +39,11 @@ target_include_directories(${PROJECT_NAME}
         ${CMAKE_CURRENT_SOURCE_DIR}/external/demucs.cpp/vendor/libnyquist/include
 )
 
+target_compile_definitions(${PROJECT_NAME}
+        PUBLIC
+        STEMSMITH_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data"
+)
+
 target_link_libraries(${PROJECT_NAME}
         PUBLIC
         demucs.cpp.lib
@@ -92,6 +97,7 @@ target_link_libraries(${PROJECT_NAME}_test
 target_include_directories(${PROJECT_NAME}_test
         PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/support
 )
 
 target_compile_definitions(${PROJECT_NAME}_test

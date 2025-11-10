@@ -73,7 +73,7 @@ struct worker_pool::impl
             std::lock_guard lock(mutex);
             if (shutting_down)
             {
-                throw std::runtime_error("Worker pool is shutting down");
+                return -1;
             }
             id = next_id++;
             queue.push_back(queued_job{id, std::move(job)});
