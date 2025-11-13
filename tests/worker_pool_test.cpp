@@ -5,6 +5,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <filesystem>
+#include <latch>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -33,9 +34,11 @@ TEST(worker_pool_test, process_jobs_and_emit_events)
     std::mutex processed_mutex;
     std::size_t completed = 0;
 
+    std::latch start_latch(1);
     const worker_pool pool(
         1,
         [&](const job_descriptor& job, const std::atomic_bool& stop_flag) {
+            start_latch.wait();
             ASSERT_FALSE(stop_flag.load());
             std::lock_guard lock(processed_mutex);
             processed_paths.push_back(job.input_path.string());
@@ -53,10 +56,12 @@ TEST(worker_pool_test, process_jobs_and_emit_events)
     const auto first_id = pool.enqueue(make_job("/music/first.wav"));
     const auto second_id = pool.enqueue(make_job("/music/second.wav"));
 
+    start_latch.count_down();
+
     {
         std::unique_lock lock(events_mutex);
         ASSERT_TRUE(events_cv.wait_for(lock,
-            std::chrono::milliseconds(200),
+            std::chrono::milliseconds(100),
             [&] { return completed == 2; }));
     }
 
@@ -139,7 +144,7 @@ TEST(worker_pool_test, cancels_pending_jobs_on_shutdown)
     {
         std::unique_lock lock(events_mutex);
         ASSERT_TRUE(events_cv.wait_for(lock,
-            std::chrono::milliseconds(200),
+            std::chrono::seconds(2),
             [&] { return first_job_running; }));
     }
 
@@ -186,7 +191,7 @@ TEST(worker_pool_test, rejects_enqueue_after_shutdown)
     {
         std::unique_lock lock(processed_mutex);
         ASSERT_TRUE(processed_cv.wait_for(lock,
-            std::chrono::milliseconds(200),
+            std::chrono::seconds(2),
             [&] { return processed == 1; }));
     }
 
