@@ -23,8 +23,9 @@ TEST(job_config_test, defaults_are_correct)
     EXPECT_EQ(config.profile, model_profile_id::balanced_six_stem);
     EXPECT_TRUE(config.stems_filter.empty());
 
-    const auto& profile = lookup_profile(config.profile);
-    EXPECT_EQ(profile.key, "balanced-six-stem");
+    const auto profile = lookup_profile(config.profile);
+    ASSERT_TRUE(profile.has_value());
+    EXPECT_EQ(profile->key, "balanced-six-stem");
 
     const std::vector<std::string> expected{"vocals", "drums", "bass", "piano", "guitar", "other"};
     EXPECT_EQ(config.resolved_stems(), expected);

@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <expected>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -26,8 +27,8 @@ struct model_profile
     std::size_t stem_count;
 };
 
-const model_profile& lookup_profile(model_profile_id id);
-const model_profile& lookup_profile(std::string_view key);
+std::optional<model_profile> lookup_profile(model_profile_id id);
+std::optional<model_profile> lookup_profile(std::string_view key);
 
 /**
  * @brief Configuration for a single separation job.

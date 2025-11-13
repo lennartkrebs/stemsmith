@@ -92,14 +92,19 @@ std::expected<job_config, std::string> job_catalog::apply_overrides(
         config.profile = *overrides.profile;
     }
 
-    const auto& profile = lookup_profile(config.profile);
+    const auto profile = lookup_profile(config.profile);
+    if (!profile)
+    {
+        return std::unexpected("Unknown model profile id");
+    }
+    const auto& resolved_profile = *profile;
 
     if (overrides.stems_filter)
     {
         std::vector<std::string> stems = *overrides.stems_filter;
         for (const auto& stem : stems)
         {
-            if (!stem_supported(stem, profile))
+            if (!stem_supported(stem, resolved_profile))
             {
                 return std::unexpected("Unsupported stem override: " + stem);
             }

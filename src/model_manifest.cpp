@@ -5,6 +5,7 @@
 
 #include <expected>
 #include <fstream>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -20,12 +21,6 @@ std::string expand_template(std::string_view tpl, std::string_view placeholder, 
         result.replace(pos, placeholder.size(), value);
     }
     return result;
-}
-
-stemsmith::model_profile_id profile_from_key(const std::string& key)
-{
-    const auto& profile = stemsmith::lookup_profile(key);
-    return profile.id;
 }
 } // namespace
 
@@ -45,14 +40,13 @@ model_manifest::load_default()
 #ifndef STEMSMITH_DATA_DIR
 #error "STEMSMITH_DATA_DIR is not defined"
 #endif
-    const std::filesystem::path manifest_path =
-        std::filesystem::path{STEMSMITH_DATA_DIR} / "model_manifest.json";
+    const std::filesystem::path manifest_path = std::filesystem::path{STEMSMITH_DATA_DIR} / "model_manifest.json";
     return from_file(manifest_path);
 }
 
 std::expected<model_manifest, std::string> model_manifest::from_file(const std::filesystem::path& path)
 {
-    auto doc = utils::load_json_file(path);
+    const auto doc = utils::load_json_file(path);
     if (!doc)
     {
         return std::unexpected(doc.error());
@@ -82,15 +76,10 @@ std::expected<model_manifest, std::string> model_manifest::from_file(const std::
         const auto sha = item["sha256"].get<std::string>();
         const auto size = item.value("size_bytes", 0ULL);
 
-        model_profile_id profile;
-        try
+        const auto profile = lookup_profile(profile_key);
+        if (!profile)
         {
-            profile = profile_from_key(profile_key);
-        }
-        catch (const std::exception& err)
-        {
-            return std::unexpected(std::string{"Unknown profile in manifest: "} + profile_key +
-                                   " (" + err.what() + ")");
+            return std::unexpected("Unknown profile in manifest: " + profile_key);
         }
         std::string url;
         if (item.contains("url"))
@@ -106,14 +95,13 @@ std::expected<model_manifest, std::string> model_manifest::from_file(const std::
             return std::unexpected("No URL specified for manifest entry: " + profile_key);
         }
 
-        entries.push_back(model_manifest_entry{profile, profile_key, filename, url, size, sha});
+        entries.push_back(model_manifest_entry{profile->id, profile_key, filename, url, size, sha});
     }
 
     return model_manifest{std::move(entries)};
 }
 
-const model_manifest_entry*
-model_manifest::find(model_profile_id profile) const
+const model_manifest_entry* model_manifest::find(model_profile_id profile) const
 {
     const auto it = entries_.find(profile);
     return it == entries_.end() ? nullptr : &it->second;

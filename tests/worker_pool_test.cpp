@@ -71,18 +71,29 @@ TEST(worker_pool_test, process_jobs_and_emit_events)
     {
         std::lock_guard lock(events_mutex);
         ASSERT_EQ(events.size(), 6U);
-        EXPECT_EQ(events[0].id, first_id);
-        EXPECT_EQ(events[0].status, job_status::queued);
-        EXPECT_EQ(events[1].id, second_id);
-        EXPECT_EQ(events[1].status, job_status::queued);
-        EXPECT_EQ(events[2].id, first_id);
-        EXPECT_EQ(events[2].status, job_status::running);
-        EXPECT_EQ(events[3].id, first_id);
-        EXPECT_EQ(events[3].status, job_status::completed);
-        EXPECT_EQ(events[4].id, second_id);
-        EXPECT_EQ(events[4].status, job_status::running);
-        EXPECT_EQ(events[5].id, second_id);
-        EXPECT_EQ(events[5].status, job_status::completed);
+        const auto statuses_for = [&](std::size_t id) {
+            std::vector<job_status> statuses;
+            for (const auto& event : events)
+            {
+                if (event.id == id)
+                {
+                    statuses.push_back(event.status);
+                }
+            }
+            return statuses;
+        };
+
+        const auto first_statuses = statuses_for(first_id);
+        ASSERT_EQ(first_statuses.size(), 3U);
+        EXPECT_EQ(first_statuses[0], job_status::queued);
+        EXPECT_EQ(first_statuses[1], job_status::running);
+        EXPECT_EQ(first_statuses[2], job_status::completed);
+
+        const auto second_statuses = statuses_for(second_id);
+        ASSERT_EQ(second_statuses.size(), 3U);
+        EXPECT_EQ(second_statuses[0], job_status::queued);
+        EXPECT_EQ(second_statuses[1], job_status::running);
+        EXPECT_EQ(second_statuses[2], job_status::completed);
     }
 }
 

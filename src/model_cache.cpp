@@ -15,14 +15,12 @@ namespace
 {
 using stemsmith::model_manifest_entry;
 
-std::filesystem::path model_path(const std::filesystem::path& root,
-                                 const model_manifest_entry& entry)
+std::filesystem::path model_path(const std::filesystem::path& root, const model_manifest_entry& entry)
 {
     return root / entry.profile_key / entry.filename;
 }
 
-std::expected<bool, std::string>
-file_ready(const std::filesystem::path& path, const model_manifest_entry& entry)
+std::expected<bool, std::string> file_ready(const std::filesystem::path& path, const model_manifest_entry& entry)
 {
     std::error_code ec;
     if (!std::filesystem::exists(path, ec))
@@ -63,9 +61,7 @@ file_ready(const std::filesystem::path& path, const model_manifest_entry& entry)
 
 namespace stemsmith
 {
-std::expected<model_cache, std::string>
-model_cache::create(std::filesystem::path cache_root,
-                    std::shared_ptr<weight_fetcher> fetcher)
+std::expected<model_cache, std::string> model_cache::create(std::filesystem::path cache_root, std::shared_ptr<weight_fetcher> fetcher)
 {
     if (!fetcher)
     {
@@ -80,16 +76,13 @@ model_cache::create(std::filesystem::path cache_root,
     return model_cache{std::move(cache_root), std::move(fetcher), std::move(manifest.value())};
 }
 
-model_cache::model_cache(std::filesystem::path cache_root,
-                         std::shared_ptr<weight_fetcher> fetcher,
-                         model_manifest manifest)
+model_cache::model_cache(std::filesystem::path cache_root, std::shared_ptr<weight_fetcher> fetcher, model_manifest manifest)
     : cache_root_(std::move(cache_root))
     , fetcher_(std::move(fetcher))
     , manifest_(std::move(manifest))
 {}
 
-std::expected<model_handle, std::string>
-model_cache::ensure_ready(model_profile_id profile)
+std::expected<model_handle, std::string> model_cache::ensure_ready(model_profile_id profile)
 {
     if (!fetcher_)
     {
@@ -106,8 +99,7 @@ model_cache::ensure_ready(model_profile_id profile)
     return result;
 }
 
-std::expected<void, std::string>
-model_cache::purge(model_profile_id profile)
+std::expected<void, std::string> model_cache::purge(model_profile_id profile) const
 {
     const auto* entry = manifest_.find(profile);
     if (!entry)
@@ -124,8 +116,7 @@ model_cache::purge(model_profile_id profile)
     return {};
 }
 
-std::expected<void, std::string>
-model_cache::purge_all()
+std::expected<void, std::string> model_cache::purge_all() const
 {
     std::error_code ec;
     std::filesystem::remove_all(cache_root_, ec);
@@ -136,20 +127,18 @@ model_cache::purge_all()
     return {};
 }
 
-model_cache::profile_state&
-model_cache::state_for(model_profile_id profile)
+model_cache::profile_state& model_cache::state_for(model_profile_id profile)
 {
     auto it = profile_states_.find(profile);
     if (it == profile_states_.end())
     {
-        auto state = std::make_shared<profile_state>();
+        auto state = std::make_unique<profile_state>();
         it = profile_states_.emplace(profile, std::move(state)).first;
     }
     return *it->second;
 }
 
-std::expected<model_handle, std::string>
-model_cache::hydrate(model_profile_id profile, const model_manifest_entry& entry)
+std::expected<model_handle, std::string> model_cache::hydrate(model_profile_id profile, const model_manifest_entry& entry)
 {
     const auto path = model_path(cache_root_, entry);
 
@@ -163,8 +152,8 @@ model_cache::hydrate(model_profile_id profile, const model_manifest_entry& entry
         return model_handle{profile, path, entry.sha256, entry.size_bytes, true};
     }
 
-    auto& state = state_for(profile);
-    std::unique_lock lock(state.mutex);
+    auto& [mutex] = state_for(profile);
+    std::unique_lock lock(mutex);
 
     ready = file_ready(path, entry);
     if (!ready)
@@ -179,9 +168,7 @@ model_cache::hydrate(model_profile_id profile, const model_manifest_entry& entry
     return download_and_stage(profile, entry);
 }
 
-std::expected<model_handle, std::string>
-model_cache::download_and_stage(model_profile_id profile,
-                                const model_manifest_entry& entry)
+std::expected<model_handle, std::string> model_cache::download_and_stage(model_profile_id profile, const model_manifest_entry& entry) const
 {
     const auto target_path = model_path(cache_root_, entry);
     std::filesystem::path staging = target_path;
@@ -196,8 +183,7 @@ model_cache::download_and_stage(model_profile_id profile,
 
     std::filesystem::remove(staging, ec); // ignore failure
 
-    const auto fetch = fetcher_->fetch_weights(entry.url, staging);
-    if (!fetch)
+    if (const auto fetch = fetcher_->fetch_weights(entry.url, staging); !fetch)
     {
         std::filesystem::remove(staging, ec);
         return std::unexpected(fetch.error());
@@ -248,9 +234,7 @@ model_cache::download_and_stage(model_profile_id profile,
     return model_handle{profile, target_path, entry.sha256, entry.size_bytes, false};
 }
 
-std::expected<bool, std::string>
-model_cache::verify_checksum(const std::filesystem::path& path,
-                             const model_manifest_entry& entry)
+std::expected<bool, std::string> model_cache::verify_checksum(const std::filesystem::path& path, const model_manifest_entry& entry)
 {
     std::ifstream input(path, std::ios::binary);
     if (!input)

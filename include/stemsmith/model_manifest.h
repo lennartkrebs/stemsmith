@@ -30,11 +30,9 @@ public:
     explicit model_manifest(std::vector<model_manifest_entry> entries);
 
     static std::expected<model_manifest, std::string> load_default();
-    static std::expected<model_manifest, std::string>
-    from_file(const std::filesystem::path& path);
+    static std::expected<model_manifest, std::string> from_file(const std::filesystem::path& path);
 
     [[nodiscard]] const model_manifest_entry* find(model_profile_id profile) const;
-
 private:
     std::map<model_profile_id, model_manifest_entry> entries_;
 };

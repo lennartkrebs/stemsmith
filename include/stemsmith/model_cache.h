@@ -31,9 +31,7 @@ class model_cache
 public:
     static std::expected<model_cache, std::string> create(std::filesystem::path cache_root, std::shared_ptr<weight_fetcher> fetcher);
 
-    model_cache(std::filesystem::path cache_root,
-                std::shared_ptr<weight_fetcher> fetcher,
-                model_manifest manifest);
+    model_cache(std::filesystem::path cache_root, std::shared_ptr<weight_fetcher> fetcher, model_manifest manifest);
 
     // Disable copy, enable move
     model_cache(model_cache&&) noexcept = default;
@@ -44,10 +42,11 @@ public:
     [[nodiscard]] const std::filesystem::path& root() const noexcept { return cache_root_; }
 
     std::expected<model_handle, std::string> ensure_ready(model_profile_id profile);
-    std::expected<void, std::string> purge(model_profile_id profile);
-    std::expected<void, std::string> purge_all();
+    std::expected<void, std::string> purge(model_profile_id profile) const;
+    std::expected<void, std::string> purge_all() const;
 
     static std::expected<bool, std::string> verify_checksum(const std::filesystem::path& path, const model_manifest_entry& entry);
+
 private:
     std::filesystem::path cache_root_;
     std::shared_ptr<weight_fetcher> fetcher_;
@@ -57,10 +56,10 @@ private:
     {
         std::mutex mutex;
     };
-    std::map<model_profile_id, std::shared_ptr<profile_state>> profile_states_;
+    std::map<model_profile_id, std::unique_ptr<profile_state>> profile_states_;
 
     profile_state& state_for(model_profile_id profile);
     std::expected<model_handle, std::string> hydrate(model_profile_id profile, const model_manifest_entry& entry);
-    std::expected<model_handle, std::string> download_and_stage(model_profile_id profile, const model_manifest_entry& entry);
+    std::expected<model_handle, std::string> download_and_stage(model_profile_id profile, const model_manifest_entry& entry) const;
 };
 } // namespace stemsmith

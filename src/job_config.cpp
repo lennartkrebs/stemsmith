@@ -7,7 +7,6 @@
 #include <filesystem>
 #include <fstream>
 #include <initializer_list>
-#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -164,22 +163,22 @@ bool stem_in_profile(std::string_view stem,
 
 namespace stemsmith
 {
-const model_profile& lookup_profile(model_profile_id id)
+std::optional<model_profile> lookup_profile(model_profile_id id)
 {
     if (const auto* profile = find_profile(id))
     {
         return *profile;
     }
-    throw std::runtime_error("Unknown model profile id");
+    return std::nullopt;
 }
 
-const model_profile& lookup_profile(std::string_view key)
+std::optional<model_profile> lookup_profile(std::string_view key)
 {
     if (const auto* profile = find_profile(key))
     {
         return *profile;
     }
-    throw std::runtime_error("Unknown model profile: " + std::string{key});
+    return std::nullopt;
 }
 
 std::expected<job_config, std::string> job_config::from_file(const std::filesystem::path& path)
@@ -257,12 +256,16 @@ std::vector<std::string> job_config::resolved_stems() const
         return stems_filter;
     }
 
-    const auto& active_profile = lookup_profile(profile);
-    std::vector<std::string> result;
-    result.reserve(active_profile.stem_count);
-    for (std::size_t i = 0; i < active_profile.stem_count; ++i)
+    const auto active_profile = lookup_profile(profile);
+    if (!active_profile)
     {
-        result.emplace_back(active_profile.stems[i]);
+        return {};
+    }
+    std::vector<std::string> result;
+    result.reserve(active_profile->stem_count);
+    for (std::size_t i = 0; i < active_profile->stem_count; ++i)
+    {
+        result.emplace_back(active_profile->stems[i]);
     }
     return result;
 }

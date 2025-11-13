@@ -37,9 +37,7 @@ public:
     using job_processor = std::function<void(const job_descriptor&, const std::atomic_bool& stop_flag)>;
     using job_callback = std::function<void(const job_event&)>;
 
-    worker_pool(std::size_t thread_count,
-                job_processor processor,
-                job_callback callback = {});
+    worker_pool(std::size_t thread_count, job_processor processor, job_callback callback = {});
     ~worker_pool();
 
     // non-copyable, non-movable
