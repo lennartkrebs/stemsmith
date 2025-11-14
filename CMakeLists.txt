@@ -29,6 +29,7 @@ add_subdirectory(external/demucs.cpp)
 
 file(GLOB SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 add_library(${PROJECT_NAME} ${SOURCES})
+add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
 target_include_directories(${PROJECT_NAME}
         PUBLIC
@@ -50,6 +51,10 @@ target_link_libraries(${PROJECT_NAME}
         libnyquist
         samplerate
 )
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wno-deprecated-declarations)
+endif()
 
 option(ENABLE_OPENMP "Enable OpenMP for faster inference" ON)
 if (ENABLE_OPENMP)
@@ -93,6 +98,10 @@ target_link_libraries(${PROJECT_NAME}_test
         ${PROJECT_NAME}
         GTest::gtest
 )
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(${PROJECT_NAME}_test PRIVATE -Wno-deprecated-declarations)
+endif()
 
 target_include_directories(${PROJECT_NAME}_test
         PRIVATE
