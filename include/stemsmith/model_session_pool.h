@@ -14,17 +14,19 @@
 namespace stemsmith
 {
 
-class model_session_pool
-{
-public:
-    using session_ptr = std::unique_ptr<model_session>;
-    using session_factory = std::function<std::expected<session_ptr, std::string>(model_profile_id)>;
-
-    explicit model_session_pool(model_cache& cache);
-    explicit model_session_pool(session_factory factory);
-
-    class session_handle
+    class model_session_pool
     {
+    public:
+        using session_ptr = std::unique_ptr<model_session>;
+        using session_factory = std::function<std::expected<session_ptr, std::string>(model_profile_id)>;
+
+        explicit model_session_pool(model_cache& cache);
+        explicit model_session_pool(session_factory factory);
+        model_session_pool(model_session_pool&& other) noexcept;
+        model_session_pool& operator=(model_session_pool&& other) noexcept;
+
+        class session_handle
+        {
     public:
         session_handle() = default;
         ~session_handle();
