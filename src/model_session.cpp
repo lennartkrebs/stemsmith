@@ -111,7 +111,7 @@ std::expected<std::vector<std::size_t>, std::string> model_session::resolve_stem
     return indices;
 }
 
-std::expected<separation_result, std::string> model_session::separate(const audio_buffer& input, std::span<const std::string_view> stems_to_extract)
+std::expected<separation_result, std::string> model_session::separate(const audio_buffer& input, std::span<const std::string_view> stems_to_extract, demucscpp::ProgressCallback progress_cb)
 {
     if (input.channels != kExpectedChannels)
     {
@@ -143,7 +143,7 @@ std::expected<separation_result, std::string> model_session::separate(const audi
         audio_matrix(1, static_cast<int>(i)) = input.samples[i * 2 + 1];
     }
 
-    const auto outputs = inference_(*model.value(), audio_matrix, demucscpp::ProgressCallback{}); // Empty callback for now
+    auto outputs = inference_(*model.value(), audio_matrix, std::move(progress_cb));
 
     if (outputs.dimension(2) != static_cast<Eigen::Index>(frames))
     {

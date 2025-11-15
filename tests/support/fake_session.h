@@ -3,6 +3,7 @@
 #include <expected>
 #include <filesystem>
 #include <memory>
+#include <stdexcept>
 
 #include <Eigen/Dense>
 
@@ -38,7 +39,13 @@ inline std::unique_ptr<model_session> make_stub_session(model_profile_id profile
     };
 
     const auto stem_count = static_cast<int>(profile_opt->stem_count);
-    auto inference = [stem_count, frame_count, fill_value](const demucscpp::demucs_model&, const Eigen::MatrixXf&, demucscpp::ProgressCallback) {
+    auto inference = [stem_count, frame_count, fill_value](const demucscpp::demucs_model&,
+                                                           const Eigen::MatrixXf&,
+                                                           demucscpp::ProgressCallback cb) {
+        if (cb)
+        {
+            cb(0.5f, "stub");
+        }
         Eigen::Tensor3dXf tensor(stem_count, 2, frame_count);
         tensor.setConstant(fill_value);
         return tensor;

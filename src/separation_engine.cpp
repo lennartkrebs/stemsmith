@@ -33,7 +33,9 @@ separation_engine::separation_engine(model_session_pool&& pool,
     , writer_(std::move(writer))
 {}
 
-std::expected<std::filesystem::path, std::string> separation_engine::process(const job_descriptor& job)
+std::expected<std::filesystem::path, std::string>
+separation_engine::process(const job_descriptor& job,
+                           demucscpp::ProgressCallback progress_cb)
 {
     if (!loader_)
     {
@@ -72,7 +74,7 @@ std::expected<std::filesystem::path, std::string> separation_engine::process(con
         filter_span = {filter_views.data(), filter_views.size()};
     }
 
-    auto result = session_handle->get()->separate(*audio, filter_span);
+    auto result = session_handle->get()->separate(*audio, filter_span, std::move(progress_cb));
     if (!result)
     {
         return std::unexpected(result.error());

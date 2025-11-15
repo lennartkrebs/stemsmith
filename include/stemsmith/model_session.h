@@ -33,7 +33,10 @@ public:
     model_session(model_profile profile, model_cache& cache);
     model_session(model_profile profile, weight_resolver resolver, loader_function loader, inference_function inference);
 
-    std::expected<separation_result, std::string> separate(const audio_buffer& input, std::span<const std::string_view> stems_to_extract = {});
+    std::expected<separation_result, std::string>
+    separate(const audio_buffer& input,
+             std::span<const std::string_view> stems_to_extract = {},
+             demucscpp::ProgressCallback progress_cb = {});
 
 private:
     std::expected<demucscpp::demucs_model*, std::string> ensure_model_loaded();

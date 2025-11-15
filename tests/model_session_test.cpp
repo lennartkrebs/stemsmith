@@ -94,7 +94,7 @@ TEST(model_session_test, rejects_unknown_stem_request)
     ASSERT_TRUE(profile_opt.has_value());
     auto session = make_session(profile_opt.value(), make_tensor(4, 2));
     const auto input = make_audio_buffer(2);
-    const std::array<std::string_view, 1> filter{"flute"};
+    constexpr std::array<std::string_view, 1> filter{"flute"};
     const auto result = session.separate(input, filter);
     ASSERT_FALSE(result.has_value());
     EXPECT_NE(result.error().find("Unknown stem"), std::string::npos);

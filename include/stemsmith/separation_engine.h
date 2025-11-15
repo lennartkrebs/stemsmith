@@ -32,7 +32,8 @@ public:
                       audio_writer writer);
 
     [[nodiscard]] std::expected<std::filesystem::path, std::string>
-    process(const job_descriptor& job);
+    process(const job_descriptor& job,
+            demucscpp::ProgressCallback progress_cb = {});
 
 private:
     std::filesystem::path output_root_;

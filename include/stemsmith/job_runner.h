@@ -6,8 +6,11 @@
 
 #include <expected>
 #include <future>
+#include <functional>
 #include <mutex>
 #include <optional>
+#include <thread>
+#include <vector>
 #include <unordered_map>
 
 namespace stemsmith
@@ -24,8 +27,17 @@ struct job_result
 class job_runner
 {
 public:
-    job_runner(job_config base_config, model_cache& cache, std::filesystem::path output_root, std::size_t worker_count = std::thread::hardware_concurrency());
-    job_runner(job_config base_config, separation_engine engine, std::size_t worker_count = std::thread::hardware_concurrency());
+    job_runner(job_config base_config,
+               model_cache& cache,
+               std::filesystem::path output_root,
+               std::size_t worker_count = std::thread::hardware_concurrency(),
+               std::function<void(const job_descriptor&, float, const std::string&)> progress = {},
+               std::function<void(const job_event&, const job_descriptor&)> status_callback = {});
+    job_runner(job_config base_config,
+               separation_engine engine,
+               std::size_t worker_count = std::thread::hardware_concurrency(),
+               std::function<void(const job_descriptor&, float, const std::string&)> progress = {},
+               std::function<void(const job_event&, const job_descriptor&)> status_callback = {});
 
     std::expected<std::future<job_result>, std::string> submit(const std::filesystem::path& path, const job_overrides& overrides = {});
 
@@ -35,6 +47,8 @@ private:
         std::promise<job_result> promise;
         std::optional<std::filesystem::path> output_dir;
         std::optional<std::string> error;
+        job_descriptor job;
+        std::size_t job_id{static_cast<std::size_t>(-1)};
     };
 
     void process_job(const job_descriptor& job, const std::atomic_bool& stop_flag);
@@ -44,10 +58,13 @@ private:
     job_catalog catalog_;
     separation_engine engine_;
     worker_pool pool_;
+    std::function<void(const job_descriptor&, float, const std::string&)> progress_;
+    std::function<void(const job_event&, const job_descriptor&)> status_callback_;
 
     mutable std::mutex mutex_;
     std::unordered_map<std::filesystem::path, std::shared_ptr<job_context>> contexts_;
     std::unordered_map<std::size_t, std::filesystem::path> paths_by_id_;
+    std::unordered_map<std::size_t, std::vector<job_event>> pending_events_;
 };
 
 } // namespace stemsmith
