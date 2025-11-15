@@ -1,7 +1,5 @@
 #include <gtest/gtest.h>
 
-#include <Eigen/Dense>
-
 #include <array>
 #include <expected>
 #include <filesystem>
@@ -14,14 +12,9 @@
 
 namespace
 {
-using stemsmith::audio_buffer;
-using stemsmith::model_profile_id;
-using stemsmith::model_session;
-using stemsmith::separation_result;
-
-audio_buffer make_audio_buffer(std::size_t frames)
+stemsmith::audio_buffer make_audio_buffer(std::size_t frames)
 {
-    audio_buffer buffer;
+    stemsmith::audio_buffer buffer;
     buffer.sample_rate = demucscpp::SUPPORTED_SAMPLE_RATE;
     buffer.channels = 2;
     buffer.samples.resize(frames * buffer.channels);
@@ -50,7 +43,7 @@ Eigen::Tensor3dXf make_tensor(std::size_t targets, std::size_t frames)
     return tensor;
 }
 
-model_session make_session(const stemsmith::model_profile& profile,
+stemsmith::model_session make_session(const stemsmith::model_profile& profile,
                            Eigen::Tensor3dXf outputs)
 {
     auto resolver = []() -> std::expected<std::filesystem::path, std::string> {
@@ -66,7 +59,7 @@ model_session make_session(const stemsmith::model_profile& profile,
             return tensor;
         };
 
-    return model_session(profile, std::move(resolver), std::move(loader), std::move(inference));
+    return stemsmith::model_session(profile, std::move(resolver), std::move(loader), std::move(inference));
 }
 } // namespace
 

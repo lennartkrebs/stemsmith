@@ -12,14 +12,6 @@
 
 namespace
 {
-using stemsmith::audio_buffer;
-using stemsmith::job_runner;
-using stemsmith::job_result;
-using stemsmith::model_profile_id;
-using stemsmith::model_session;
-using stemsmith::model_session_pool;
-using stemsmith::separation_engine;
-
 std::filesystem::path write_temp_wav()
 {
     const auto temp = std::filesystem::temp_directory_path() / "stemsmith-job.wav";
