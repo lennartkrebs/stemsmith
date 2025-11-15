@@ -90,17 +90,17 @@ TEST(job_runner_test, resolves_future_on_completion)
     separation_engine engine(std::move(pool), output_root, loader, writer);
     job_runner runner({}, std::move(engine), 1);
 
-    const auto input_path = write_temp_wav();
-    auto submit_result = runner.submit(input_path);
+    const auto input_path_wav = write_temp_wav();
+    auto submit_result = runner.submit(input_path_wav);
     ASSERT_TRUE(submit_result.has_value());
 
     auto future = std::move(submit_result.value());
-    auto result = future.get();
+    auto [input_path, output_dir, status, error] = future.get();
 
-    EXPECT_EQ(result.status, job_status::completed);
-    EXPECT_EQ(result.input_path, input_path.lexically_normal());
-    EXPECT_EQ(result.output_dir, output_root / input_path.stem());
-    EXPECT_FALSE(result.error.has_value());
+    EXPECT_EQ(status, job_status::completed);
+    EXPECT_EQ(input_path, input_path.lexically_normal());
+    EXPECT_EQ(output_dir, output_root / input_path.stem());
+    EXPECT_FALSE(error.has_value());
     EXPECT_EQ(writes.size(), 6U);
 }
 
