@@ -14,19 +14,20 @@
 namespace stemsmith
 {
 
-    class model_session_pool
+class model_session_pool
+{
+public:
+    using session_ptr = std::unique_ptr<model_session>;
+    using session_factory = std::function<std::expected<session_ptr, std::string>(model_profile_id)>;
+
+    explicit model_session_pool(model_cache& cache);
+    explicit model_session_pool(session_factory factory);
+
+    model_session_pool(model_session_pool&& other) noexcept;
+    model_session_pool& operator=(model_session_pool&& other) noexcept;
+
+    class session_handle
     {
-    public:
-        using session_ptr = std::unique_ptr<model_session>;
-        using session_factory = std::function<std::expected<session_ptr, std::string>(model_profile_id)>;
-
-        explicit model_session_pool(model_cache& cache);
-        explicit model_session_pool(session_factory factory);
-        model_session_pool(model_session_pool&& other) noexcept;
-        model_session_pool& operator=(model_session_pool&& other) noexcept;
-
-        class session_handle
-        {
     public:
         session_handle() = default;
         ~session_handle();
@@ -54,6 +55,9 @@ namespace stemsmith
     [[nodiscard]] std::expected<session_handle, std::string> acquire(model_profile_id profile);
 
 private:
+    /**
+     * @brief Bucket of idle sessions for a specific model profile.
+     */
     struct bucket
     {
         std::vector<session_ptr> idle_sessions;
@@ -61,7 +65,7 @@ private:
 
     void recycle(model_profile_id profile, session_ptr session);
 
-    std::mutex mutex_;
+    std::mutex mutex_; // broad mutex for protecting access to buckets
     std::map<model_profile_id, bucket> buckets_;
     session_factory factory_;
 };

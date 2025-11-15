@@ -89,8 +89,7 @@ std::expected<std::filesystem::path, std::string> separation_engine::process(con
     for (auto& [stem_name, buffer] : result->stems)
     {
         const auto stem_path = job_dir / (stem_name + ".wav");
-        const auto status = writer_(stem_path, buffer);
-        if (!status)
+        if (const auto status = writer_(stem_path, buffer); !status)
         {
             return std::unexpected(status.error());
         }

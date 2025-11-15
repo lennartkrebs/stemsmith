@@ -5,6 +5,9 @@
 
 namespace stemsmith
 {
+/**
+ * @brief Represents an audio buffer with interleaved PCM samples.
+ */
 struct audio_buffer
 {
     int sample_rate{};

@@ -103,7 +103,7 @@ std::expected<model_session_pool::session_handle, std::string> model_session_poo
         return std::unexpected("Session pool is not configured with a factory");
     }
 
-    session_ptr session;
+    session_ptr session = nullptr;
     {
         std::lock_guard lock(mutex_);
         if (auto& [idle_sessions] = buckets_[profile]; !idle_sessions.empty())

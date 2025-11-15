@@ -114,4 +114,10 @@ std::expected<job_config, std::string> job_catalog::apply_overrides(
 
     return config;
 }
+
+void job_catalog::release(const std::filesystem::path& path)
+{
+    const auto normalized = normalize(path);
+    seen_paths_.erase(normalized);
+}
 } // namespace stemsmith

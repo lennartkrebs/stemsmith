@@ -41,13 +41,16 @@ std::unique_ptr<model_session> make_stub_session(model_profile_id profile_id)
     auto resolver = []() -> std::expected<std::filesystem::path, std::string> {
         return std::filesystem::path{"weights.bin"};
     };
+
     auto loader = [](demucscpp::demucs_model&, const std::filesystem::path&) {
         return std::expected<void, std::string>{};
     };
-    auto inference = [](const demucscpp::demucs_model&,
-                        const Eigen::MatrixXf&,
-                        demucscpp::ProgressCallback) {
-        Eigen::Tensor3dXf tensor(4, 2, 4);
+
+    const auto stem_count = static_cast<int>(profile->stem_count);
+    auto inference = [stem_count](const demucscpp::demucs_model&,
+                                  const Eigen::MatrixXf&,
+                                  const demucscpp::ProgressCallback&) {
+        Eigen::Tensor3dXf tensor(stem_count, 2, 4);
         tensor.setConstant(0.5f);
         return tensor;
     };
@@ -65,6 +68,7 @@ TEST(separation_engine_test, processes_job_and_writes_stems)
         writes.emplace_back(path, buffer);
         return {};
     };
+
     auto loader = [](const std::filesystem::path&) -> std::expected<audio_buffer, std::string> {
         return make_buffer(4);
     };
@@ -100,6 +104,7 @@ TEST(separation_engine_test, propagates_loader_errors)
     auto loader = [](const std::filesystem::path&) -> std::expected<audio_buffer, std::string> {
         return std::unexpected("fail");
     };
+
     auto writer = [](const std::filesystem::path&, const audio_buffer&) -> std::expected<void, std::string> {
         return {};
     };

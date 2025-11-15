@@ -23,22 +23,25 @@ std::expected<std::unique_ptr<model_session>, std::string> make_stub_session(mod
         return std::unexpected("Unknown profile id");
     }
 
-    auto resolver = []() -> std::expected<std::filesystem::path, std::string>
-    {
+    auto resolver = []() -> std::expected<std::filesystem::path, std::string> {
         return std::filesystem::path{"weights.stub"};
     };
 
-    auto loader = [](demucscpp::demucs_model&, const std::filesystem::path&)
-    {
+    auto loader = [](demucscpp::demucs_model&, const std::filesystem::path&) {
         return std::expected<void, std::string>{};
     };
 
-    auto inference = [](const demucscpp::demucs_model&, const Eigen::MatrixXf&, demucscpp::ProgressCallback)
-    {
-        return Eigen::Tensor3dXf(4, 2, 1);
+    const auto stem_count = static_cast<int>(profile_opt->stem_count);
+    auto inference = [stem_count](const demucscpp::demucs_model&,
+                                  const Eigen::MatrixXf&,
+                                  demucscpp::ProgressCallback) {
+        Eigen::Tensor3dXf tensor(stem_count, 2, 1);
+        tensor.setZero();
+        return tensor;
     };
 
-    return std::make_unique<model_session>(profile_opt.value(), std::move(resolver), std::move(loader), std::move(inference));
+    return std::make_unique<model_session>(
+        profile_opt.value(), std::move(resolver), std::move(loader), std::move(inference));
 }
 } // namespace
 

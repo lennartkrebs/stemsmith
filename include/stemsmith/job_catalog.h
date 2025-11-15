@@ -33,12 +33,9 @@ class job_catalog
 public:
     using exists_function = std::function<bool(const std::filesystem::path&)>;
 
-    explicit job_catalog(job_config base_config = {},
-                         exists_function exists_provider = nullptr);
+    explicit job_catalog(job_config base_config = {}, exists_function exists_provider = nullptr);
 
-    std::expected<std::size_t, std::string>
-    add_file(const std::filesystem::path& path,
-             const job_overrides& overrides = {});
+    std::expected<std::size_t, std::string> add_file(const std::filesystem::path& path, const job_overrides& overrides = {});
 
     [[nodiscard]] const std::vector<job_descriptor>& jobs() const noexcept
     {
@@ -47,6 +44,7 @@ public:
 
     [[nodiscard]] std::size_t size() const noexcept { return jobs_.size(); }
     [[nodiscard]] bool empty() const noexcept { return jobs_.empty(); }
+    void release(const std::filesystem::path& path);
 
 private:
     job_config base_config_;
@@ -55,7 +53,6 @@ private:
     std::unordered_set<std::filesystem::path> seen_paths_;
 
     [[nodiscard]] static std::filesystem::path normalize(const std::filesystem::path& path);
-    [[nodiscard]] std::expected<job_config, std::string> apply_overrides(
-        const job_overrides& overrides) const;
+    [[nodiscard]] std::expected<job_config, std::string> apply_overrides(const job_overrides& overrides) const;
 };
 } // namespace stemsmith
