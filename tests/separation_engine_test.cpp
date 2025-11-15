@@ -5,59 +5,10 @@
 #include <string>
 #include <vector>
 
-#include <Eigen/Dense>
-
 #include "stemsmith/job_catalog.h"
 #include "stemsmith/model_session_pool.h"
 #include "stemsmith/separation_engine.h"
-
-namespace
-{
-using stemsmith::audio_buffer;
-using stemsmith::job_config;
-using stemsmith::job_descriptor;
-using stemsmith::model_profile_id;
-using stemsmith::model_session;
-using stemsmith::model_session_pool;
-using stemsmith::separation_engine;
-
-audio_buffer make_buffer(std::size_t frames)
-{
-    audio_buffer buffer;
-    buffer.sample_rate = demucscpp::SUPPORTED_SAMPLE_RATE;
-    buffer.channels = 2;
-    buffer.samples.resize(frames * buffer.channels);
-    return buffer;
-}
-
-std::unique_ptr<model_session> make_stub_session(model_profile_id profile_id)
-{
-    const auto profile = stemsmith::lookup_profile(profile_id);
-    if (!profile)
-    {
-        throw std::runtime_error("unknown profile");
-    }
-
-    auto resolver = []() -> std::expected<std::filesystem::path, std::string> {
-        return std::filesystem::path{"weights.bin"};
-    };
-
-    auto loader = [](demucscpp::demucs_model&, const std::filesystem::path&) {
-        return std::expected<void, std::string>{};
-    };
-
-    const auto stem_count = static_cast<int>(profile->stem_count);
-    auto inference = [stem_count](const demucscpp::demucs_model&,
-                                  const Eigen::MatrixXf&,
-                                  const demucscpp::ProgressCallback&) {
-        Eigen::Tensor3dXf tensor(stem_count, 2, 4);
-        tensor.setConstant(0.5f);
-        return tensor;
-    };
-
-    return std::make_unique<model_session>(*profile, std::move(resolver), std::move(loader), std::move(inference));
-}
-} // namespace
+#include "support/fake_session.h"
 
 namespace stemsmith
 {
@@ -70,12 +21,12 @@ TEST(separation_engine_test, processes_job_and_writes_stems)
     };
 
     auto loader = [](const std::filesystem::path&) -> std::expected<audio_buffer, std::string> {
-        return make_buffer(4);
+        return test::make_buffer(4);
     };
 
     model_session_pool pool(
         [](model_profile_id profile_id) -> std::expected<std::unique_ptr<model_session>, std::string> {
-            return make_stub_session(profile_id);
+            return test::make_stub_session(profile_id);
         });
 
     const auto output_root = std::filesystem::temp_directory_path() / "stemsmith-sep-test";
@@ -98,7 +49,7 @@ TEST(separation_engine_test, propagates_loader_errors)
 {
     model_session_pool pool(
         [](model_profile_id) -> std::expected<std::unique_ptr<model_session>, std::string> {
-            return make_stub_session(model_profile_id::balanced_four_stem);
+            return test::make_stub_session(model_profile_id::balanced_four_stem);
         });
 
     auto loader = [](const std::filesystem::path&) -> std::expected<audio_buffer, std::string> {

@@ -7,9 +7,8 @@
 #include <string>
 #include <vector>
 
-#include <Eigen/Dense>
-
 #include "stemsmith/job_runner.h"
+#include "support/fake_session.h"
 
 namespace
 {
@@ -20,41 +19,6 @@ using stemsmith::model_profile_id;
 using stemsmith::model_session;
 using stemsmith::model_session_pool;
 using stemsmith::separation_engine;
-
-audio_buffer make_buffer(std::size_t frames)
-{
-    audio_buffer buffer;
-    buffer.sample_rate = demucscpp::SUPPORTED_SAMPLE_RATE;
-    buffer.channels = 2;
-    buffer.samples.resize(frames * buffer.channels);
-    return buffer;
-}
-
-std::unique_ptr<model_session> make_stub_session(model_profile_id id)
-{
-    const auto profile = stemsmith::lookup_profile(id);
-    if (!profile)
-    {
-        throw std::runtime_error("unknown profile");
-    }
-
-    auto resolver = []() -> std::expected<std::filesystem::path, std::string> {
-        return std::filesystem::path{"weights.bin"};
-    };
-    auto loader = [](demucscpp::demucs_model&, const std::filesystem::path&) {
-        return std::expected<void, std::string>{};
-    };
-    const auto stem_count = static_cast<int>(profile->stem_count);
-    auto inference = [stem_count](const demucscpp::demucs_model&,
-                                  const Eigen::MatrixXf&,
-                                  demucscpp::ProgressCallback) {
-        Eigen::Tensor3dXf tensor(stem_count, 2, 4);
-        tensor.setConstant(0.25f);
-        return tensor;
-    };
-
-    return std::make_unique<model_session>(*profile, std::move(resolver), std::move(loader), std::move(inference));
-}
 
 std::filesystem::path write_temp_wav()
 {
@@ -76,12 +40,12 @@ TEST(job_runner_test, resolves_future_on_completion)
         return {};
     };
     auto loader = [](const std::filesystem::path&) -> std::expected<audio_buffer, std::string> {
-        return make_buffer(4);
+        return test::make_buffer(4);
     };
 
     model_session_pool pool(
         [](model_profile_id id) -> std::expected<std::unique_ptr<model_session>, std::string> {
-            return make_stub_session(id);
+            return test::make_stub_session(id);
         });
 
     const auto output_root = std::filesystem::temp_directory_path() / "stemsmith-job-output";
@@ -107,7 +71,7 @@ TEST(job_runner_test, resolves_future_on_completion)
 TEST(job_runner_test, propagates_engine_errors_to_future)
 {
 auto loader = [](const std::filesystem::path&) -> std::expected<audio_buffer, std::string> {
-        return make_buffer(4);
+        return test::make_buffer(4);
     };
 
     auto writer = [](const std::filesystem::path&, const audio_buffer&) -> std::expected<void, std::string> {
@@ -116,7 +80,7 @@ auto loader = [](const std::filesystem::path&) -> std::expected<audio_buffer, st
 
     model_session_pool pool(
         [](model_profile_id id) -> std::expected<std::unique_ptr<model_session>, std::string> {
-            return make_stub_session(id);
+            return test::make_stub_session(id);
         });
 
     const auto output_root = std::filesystem::temp_directory_path() / "stemsmith-job-output";

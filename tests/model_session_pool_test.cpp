@@ -3,9 +3,8 @@
 #include <filesystem>
 #include <string>
 
-#include <Eigen/Dense>
-
 #include "stemsmith/model_session_pool.h"
+#include "support/fake_session.h"
 
 namespace
 {
@@ -15,34 +14,6 @@ using stemsmith::model_profile_id;
 using stemsmith::model_session;
 using stemsmith::model_session_pool;
 
-std::expected<std::unique_ptr<model_session>, std::string> make_stub_session(model_profile_id profile_id)
-{
-    const auto profile_opt = stemsmith::lookup_profile(profile_id);
-    if (!profile_opt)
-    {
-        return std::unexpected("Unknown profile id");
-    }
-
-    auto resolver = []() -> std::expected<std::filesystem::path, std::string> {
-        return std::filesystem::path{"weights.stub"};
-    };
-
-    auto loader = [](demucscpp::demucs_model&, const std::filesystem::path&) {
-        return std::expected<void, std::string>{};
-    };
-
-    const auto stem_count = static_cast<int>(profile_opt->stem_count);
-    auto inference = [stem_count](const demucscpp::demucs_model&,
-                                  const Eigen::MatrixXf&,
-                                  demucscpp::ProgressCallback) {
-        Eigen::Tensor3dXf tensor(stem_count, 2, 1);
-        tensor.setZero();
-        return tensor;
-    };
-
-    return std::make_unique<model_session>(
-        profile_opt.value(), std::move(resolver), std::move(loader), std::move(inference));
-}
 } // namespace
 
 namespace stemsmith
@@ -52,7 +23,7 @@ TEST(model_session_pool_test, creates_sessions_through_factory)
     int factory_calls = 0;
     model_session_pool pool([&](model_profile_id id) {
         ++factory_calls;
-        return make_stub_session(id);
+        return test::make_stub_session(id);
     });
 
     const auto first = pool.acquire(model_profile_id::balanced_four_stem);
@@ -69,7 +40,7 @@ TEST(model_session_pool_test, recycles_sessions_when_handles_destroyed)
     int factory_calls = 0;
     model_session_pool pool([&](model_profile_id id) {
         ++factory_calls;
-        return make_stub_session(id);
+        return test::make_stub_session(id);
     });
 
     const auto first = pool.acquire(model_profile_id::balanced_four_stem);
