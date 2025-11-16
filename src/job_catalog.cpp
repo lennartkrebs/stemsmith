@@ -20,8 +20,7 @@ bool stem_supported(const std::string& stem, const stemsmith::model_profile& pro
 
 namespace stemsmith
 {
-job_catalog::job_catalog(job_config base_config, exists_function exists_provider)
-    : base_config_(std::move(base_config))
+job_catalog::job_catalog(job_config base_config, exists_function exists_provider) : base_config_(std::move(base_config))
 {
     if (exists_provider)
     {
@@ -78,8 +77,7 @@ std::filesystem::path job_catalog::normalize(const std::filesystem::path& path)
     return path.lexically_normal();
 }
 
-std::expected<job_config, std::string> job_catalog::apply_overrides(
-    const job_overrides& overrides) const
+std::expected<job_config, std::string> job_catalog::apply_overrides(const job_overrides& overrides) const
 {
     job_config config = base_config_;
 

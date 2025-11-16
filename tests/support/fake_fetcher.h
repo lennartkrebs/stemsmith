@@ -1,16 +1,17 @@
 #pragma once
-#include "stemsmith/weight_fetcher.h"
-#include <string>
-#include <string_view>
 #include <filesystem>
 #include <fstream>
+#include <string>
+#include <string_view>
+
+#include "stemsmith/weight_fetcher.h"
 
 namespace stemsmith::test
 {
 
 class fake_fetcher final : public weight_fetcher
 {
-  public:
+public:
     explicit fake_fetcher(std::string_view payload) : payload_(payload) {}
 
     std::expected<void, std::string> fetch_weights(std::string_view /*url*/,
@@ -30,7 +31,7 @@ class fake_fetcher final : public weight_fetcher
 
     size_t call_count{0};
 
-  private:
+private:
     std::string payload_{};
 };
 

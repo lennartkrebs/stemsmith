@@ -1,12 +1,12 @@
 #pragma once
 
-#include "stemsmith/job_catalog.h"
-
 #include <expected>
 #include <filesystem>
 #include <map>
 #include <string>
 #include <vector>
+
+#include "stemsmith/job_catalog.h"
 
 namespace stemsmith
 {
@@ -25,7 +25,7 @@ struct model_manifest_entry
  */
 class model_manifest
 {
-  public:
+public:
     model_manifest() = default;
     explicit model_manifest(std::vector<model_manifest_entry> entries);
 
@@ -34,7 +34,7 @@ class model_manifest
 
     [[nodiscard]] const model_manifest_entry* find(model_profile_id profile) const;
 
-  private:
+private:
     std::map<model_profile_id, model_manifest_entry> entries_;
 };
 } // namespace stemsmith

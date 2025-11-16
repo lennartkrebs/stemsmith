@@ -1,6 +1,5 @@
-#include <gtest/gtest.h>
-
 #include <filesystem>
+#include <gtest/gtest.h>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -11,7 +10,7 @@ namespace
 {
 class fake_filesystem
 {
-  public:
+public:
     fake_filesystem() = default;
 
     fake_filesystem(const std::initializer_list<std::filesystem::path> entries)
@@ -27,7 +26,7 @@ class fake_filesystem
         return files_.contains(path.lexically_normal());
     }
 
-  private:
+private:
     std::unordered_set<std::filesystem::path> files_;
 };
 } // namespace

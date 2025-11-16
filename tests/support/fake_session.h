@@ -1,11 +1,10 @@
 #pragma once
 
+#include <Eigen/Dense>
 #include <expected>
 #include <filesystem>
 #include <memory>
 #include <stdexcept>
-
-#include <Eigen/Dense>
 
 #include "stemsmith/audio_buffer.h"
 #include "stemsmith/job_config.h"
@@ -55,8 +54,7 @@ inline std::unique_ptr<model_session> make_stub_session(model_profile_id profile
         return tensor;
     };
 
-    return std::make_unique<model_session>(*profile_opt, std::move(resolver), std::move(loader),
-                                           std::move(inference));
+    return std::make_unique<model_session>(*profile_opt, std::move(resolver), std::move(loader), std::move(inference));
 }
 
 } // namespace stemsmith::test

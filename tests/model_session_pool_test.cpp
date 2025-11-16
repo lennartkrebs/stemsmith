@@ -1,6 +1,5 @@
-#include <gtest/gtest.h>
-
 #include <filesystem>
+#include <gtest/gtest.h>
 #include <string>
 
 #include "stemsmith/model_session_pool.h"
@@ -64,9 +63,8 @@ TEST(model_session_pool_test, recycles_sessions_when_handles_destroyed)
 
 TEST(model_session_pool_test, propagates_factory_errors)
 {
-    model_session_pool pool(
-        [](model_profile_id) -> std::expected<std::unique_ptr<model_session>, std::string>
-        { return std::unexpected("boom"); });
+    model_session_pool pool([](model_profile_id) -> std::expected<std::unique_ptr<model_session>, std::string>
+                            { return std::unexpected("boom"); });
 
     const auto handle = pool.acquire(model_profile_id::balanced_four_stem);
     ASSERT_FALSE(handle.has_value());

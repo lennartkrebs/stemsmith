@@ -1,7 +1,6 @@
 #include "stemsmith/http_weight_fetcher.h"
 
 #include <curl/curl.h>
-
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -42,10 +41,14 @@ http_weight_fetcher::http_weight_fetcher(std::chrono::seconds timeout) : timeout
     curl_global_init(CURL_GLOBAL_DEFAULT);
 }
 
-http_weight_fetcher::~http_weight_fetcher() { curl_global_cleanup(); }
+http_weight_fetcher::~http_weight_fetcher()
+{
+    curl_global_cleanup();
+}
 
-std::expected<void, std::string> http_weight_fetcher::fetch_weights(
-    std::string_view url, const std::filesystem::path& destination, progress_callback progress)
+std::expected<void, std::string> http_weight_fetcher::fetch_weights(std::string_view url,
+                                                                    const std::filesystem::path& destination,
+                                                                    progress_callback progress)
 {
     std::error_code ec;
     std::filesystem::create_directories(destination.parent_path(), ec);

@@ -1,21 +1,18 @@
 #include "stemsmith/model_manifest.h"
 
-#include "stemsmith/job_config.h"
-#include "stemsmith/json_utils.h"
-
 #include <expected>
 #include <fstream>
+#include <nlohmann/json.hpp>
 #include <optional>
 #include <string>
 #include <vector>
 
-#include <nlohmann/json.hpp>
+#include "stemsmith/job_config.h"
+#include "stemsmith/json_utils.h"
 
 namespace
 {
-std::string expand_template(std::string_view tpl,
-                            std::string_view placeholder,
-                            std::string_view value)
+std::string expand_template(std::string_view tpl, std::string_view placeholder, std::string_view value)
 {
     std::string result(tpl);
     if (const auto pos = result.find(placeholder); pos != std::string::npos)
@@ -41,13 +38,11 @@ std::expected<model_manifest, std::string> model_manifest::load_default()
 #ifndef STEMSMITH_DATA_DIR
 #error "STEMSMITH_DATA_DIR is not defined"
 #endif
-    const std::filesystem::path manifest_path =
-        std::filesystem::path{STEMSMITH_DATA_DIR} / "model_manifest.json";
+    const std::filesystem::path manifest_path = std::filesystem::path{STEMSMITH_DATA_DIR} / "model_manifest.json";
     return from_file(manifest_path);
 }
 
-std::expected<model_manifest, std::string> model_manifest::from_file(
-    const std::filesystem::path& path)
+std::expected<model_manifest, std::string> model_manifest::from_file(const std::filesystem::path& path)
 {
     const auto doc = utils::load_json_file(path);
     if (!doc)

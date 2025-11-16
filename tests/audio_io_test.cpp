@@ -1,15 +1,13 @@
-#include <gtest/gtest.h>
-
 #include <filesystem>
 #include <fstream>
+#include <gtest/gtest.h>
+#include <libnyquist/Common.h>
+#include <libnyquist/Decoders.h>
+#include <libnyquist/Encoders.h>
 #include <memory>
 #include <numeric>
 #include <string>
 #include <vector>
-
-#include <libnyquist/Common.h>
-#include <libnyquist/Encoders.h>
-#include <libnyquist/Decoders.h>
 
 #include "stemsmith/audio_io.h"
 
@@ -34,10 +32,7 @@ struct temp_dir
     std::filesystem::path path;
 };
 
-std::filesystem::path write_fixture_wav(const temp_dir& dir,
-                                        int sample_rate,
-                                        int channels,
-                                        std::size_t frames)
+std::filesystem::path write_fixture_wav(const temp_dir& dir, int sample_rate, int channels, std::size_t frames)
 {
     const auto data = std::make_shared<nqr::AudioData>();
     data->sampleRate = sample_rate;
@@ -46,8 +41,7 @@ std::filesystem::path write_fixture_wav(const temp_dir& dir,
     std::iota(data->samples.begin(), data->samples.end(), 0.0f);
 
     const auto file = dir.path / "input.wav";
-    const auto result = encode_wav_to_disk({channels, nqr::PCM_FLT, nqr::DITHER_TRIANGLE},
-                                           data.get(), file.string());
+    const auto result = encode_wav_to_disk({channels, nqr::PCM_FLT, nqr::DITHER_TRIANGLE}, data.get(), file.string());
     EXPECT_EQ(result, 0);
     return file;
 }
@@ -75,8 +69,7 @@ TEST(audio_io_test, loads_and_resamples_wav_to_target_rate)
     EXPECT_EQ(buffer->channels, 2U);
     EXPECT_FALSE(buffer->samples.empty());
     EXPECT_EQ(buffer->samples.size() % buffer->channels, 0U);
-    EXPECT_NEAR(static_cast<double>(buffer->frame_count()),
-                static_cast<double>(480) * (44100.0 / 48000.0), 2.0);
+    EXPECT_NEAR(static_cast<double>(buffer->frame_count()), static_cast<double>(480) * (44100.0 / 48000.0), 2.0);
     EXPECT_FLOAT_EQ(buffer->samples[0], buffer->samples[1]);
 }
 

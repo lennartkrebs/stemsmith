@@ -1,11 +1,11 @@
 #pragma once
 
+#include <atomic>
 #include <cstddef>
 #include <functional>
 #include <memory>
 #include <optional>
 #include <string>
-#include <atomic>
 
 namespace stemsmith
 {
@@ -35,9 +35,8 @@ struct job_event
  */
 class worker_pool
 {
-  public:
-    using job_processor =
-        std::function<void(const job_descriptor&, const std::atomic_bool& stop_flag)>;
+public:
+    using job_processor = std::function<void(const job_descriptor&, const std::atomic_bool& stop_flag)>;
     using job_callback = std::function<void(const job_event&)>;
 
     worker_pool(std::size_t thread_count, job_processor processor, job_callback callback = {});
@@ -53,7 +52,7 @@ class worker_pool
     void shutdown() const;
     [[nodiscard]] bool is_shutdown() const noexcept;
 
-  private:
+private:
     struct impl;
     std::unique_ptr<impl> impl_;
 };

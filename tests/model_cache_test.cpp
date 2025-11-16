@@ -1,18 +1,16 @@
-#include <gtest/gtest.h>
-
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <gtest/gtest.h>
 #include <iterator>
 #include <memory>
 #include <string>
 #include <system_error>
 
+#include "fake_fetcher.h"
 #include "stemsmith/model_cache.h"
 #include "stemsmith/model_manifest.h"
 #include "stemsmith/weight_fetcher.h"
-
-#include "fake_fetcher.h"
 
 namespace
 {
@@ -50,11 +48,13 @@ TEST(model_cache_test, download_and_cache_weights)
     const auto profile = lookup_profile(model_profile_id::balanced_four_stem);
     ASSERT_TRUE(profile.has_value());
     const std::string payload = "fake-weights";
-    const std::string expected_sha =
-        "bf6875a563be64dafa0c8e16f4b6093f55e15ba38f5c7a8844eaa61141dc805e";
-    model_manifest manifest({model_manifest_entry{
-        model_profile_id::balanced_four_stem, std::string{profile->key}, "ggml-model-test.bin",
-        "http://example.invalid/ggml-model-test.bin", payload.size(), expected_sha}});
+    const std::string expected_sha = "bf6875a563be64dafa0c8e16f4b6093f55e15ba38f5c7a8844eaa61141dc805e";
+    model_manifest manifest({model_manifest_entry{model_profile_id::balanced_four_stem,
+                                                  std::string{profile->key},
+                                                  "ggml-model-test.bin",
+                                                  "http://example.invalid/ggml-model-test.bin",
+                                                  payload.size(),
+                                                  expected_sha}});
 
     auto fetcher = std::make_shared<test::fake_fetcher>(payload);
     temp_dir dir;
@@ -106,10 +106,12 @@ TEST(model_cache_test, ensure_ready_replaces_corrupted_cache_entries)
     const auto profile = lookup_profile(model_profile_id::balanced_four_stem);
     ASSERT_TRUE(profile.has_value());
     const std::string expected_payload = "fresh-weights";
-    model_manifest manifest({model_manifest_entry{
-        model_profile_id::balanced_four_stem, std::string{profile->key}, "ggml-model-test.bin",
-        "http://example.invalid/ggml-model-test.bin", expected_payload.size(),
-        "7087b24a19bdc59f848a3c51304d4f52e6c7d53e7ae952a00c9f2486de786176"}});
+    model_manifest manifest({model_manifest_entry{model_profile_id::balanced_four_stem,
+                                                  std::string{profile->key},
+                                                  "ggml-model-test.bin",
+                                                  "http://example.invalid/ggml-model-test.bin",
+                                                  expected_payload.size(),
+                                                  "7087b24a19bdc59f848a3c51304d4f52e6c7d53e7ae952a00c9f2486de786176"}});
 
     auto fetcher = std::make_shared<test::fake_fetcher>(expected_payload);
     temp_dir dir;

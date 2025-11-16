@@ -9,8 +9,7 @@ namespace stemsmith
 
 namespace
 {
-std::filesystem::path job_output_directory(const std::filesystem::path& root,
-                                           const job_descriptor& job)
+std::filesystem::path job_output_directory(const std::filesystem::path& root, const job_descriptor& job)
 {
     const auto stem = job.input_path.stem();
     return root / stem;
@@ -21,8 +20,10 @@ separation_engine::separation_engine(model_cache& cache,
                                      std::filesystem::path output_root,
                                      audio_loader loader,
                                      audio_writer writer)
-    : output_root_(std::move(output_root)), pool_(cache), loader_(std::move(loader)),
-      writer_(std::move(writer))
+    : output_root_(std::move(output_root))
+    , pool_(cache)
+    , loader_(std::move(loader))
+    , writer_(std::move(writer))
 {
 }
 
@@ -30,13 +31,15 @@ separation_engine::separation_engine(model_session_pool&& pool,
                                      std::filesystem::path output_root,
                                      audio_loader loader,
                                      audio_writer writer)
-    : output_root_(std::move(output_root)), pool_(std::move(pool)), loader_(std::move(loader)),
-      writer_(std::move(writer))
+    : output_root_(std::move(output_root))
+    , pool_(std::move(pool))
+    , loader_(std::move(loader))
+    , writer_(std::move(writer))
 {
 }
 
-std::expected<std::filesystem::path, std::string> separation_engine::process(
-    const job_descriptor& job, demucscpp::ProgressCallback progress_cb)
+std::expected<std::filesystem::path, std::string> separation_engine::process(const job_descriptor& job,
+                                                                             demucscpp::ProgressCallback progress_cb)
 {
     if (!loader_)
     {

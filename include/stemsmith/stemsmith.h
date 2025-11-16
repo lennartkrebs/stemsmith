@@ -1,22 +1,22 @@
 #pragma once
 
-#include "stemsmith/job_config.h"
-#include "stemsmith/job_runner.h"
-#include "stemsmith/model_cache.h"
-#include "stemsmith/weight_fetcher.h"
-
 #include <expected>
 #include <filesystem>
 #include <functional>
 #include <memory>
 #include <thread>
 
+#include "stemsmith/job_config.h"
+#include "stemsmith/job_runner.h"
+#include "stemsmith/model_cache.h"
+#include "stemsmith/weight_fetcher.h"
+
 namespace stemsmith
 {
 
 class service
 {
-  public:
+public:
     using event_callback = std::function<void(const job_descriptor&, const job_event&)>;
 
     static std::expected<std::unique_ptr<service>, std::string> create(
@@ -32,10 +32,16 @@ class service
     service(service&&) = delete;
     service& operator=(service&&) = delete;
 
-    job_runner& runner() noexcept { return *runner_; }
-    model_cache& cache() noexcept { return *cache_; }
+    job_runner& runner() noexcept
+    {
+        return *runner_;
+    }
+    model_cache& cache() noexcept
+    {
+        return *cache_;
+    }
 
-  private:
+private:
     service(std::shared_ptr<model_cache> cache, std::unique_ptr<job_runner> runner);
 
     std::shared_ptr<model_cache> cache_;

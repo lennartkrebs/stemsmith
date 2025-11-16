@@ -1,16 +1,15 @@
 #include "stemsmith/job_config.h"
 
-#include "stemsmith/json_utils.h"
-
 #include <algorithm>
 #include <array>
 #include <filesystem>
 #include <fstream>
 #include <initializer_list>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
 
-#include <nlohmann/json.hpp>
+#include "stemsmith/json_utils.h"
 
 namespace
 {
@@ -52,8 +51,8 @@ std::string expand_env(const std::string& input)
         else
         {
             std::size_t j = i + 1;
-            while (j < input.size() && (std::isalnum(static_cast<unsigned char>(input[j])) ||
-                                        input[j] == '_' || input[j] == '-'))
+            while (j < input.size() &&
+                   (std::isalnum(static_cast<unsigned char>(input[j])) || input[j] == '_' || input[j] == '-'))
             {
                 ++j;
             }
@@ -118,29 +117,28 @@ consteval stemsmith::model_profile make_profile(stemsmith::model_profile_id id,
     return stemsmith::model_profile{id, key, label, filename, buffer, count};
 }
 
-constexpr std::array k_profiles{
-    make_profile(stemsmith::model_profile_id::balanced_four_stem,
-                 "balanced-four-stem",
-                 "Balanced 4-Stem",
-                 "ggml-model-htdemucs-4s-f16.bin",
-                 {"vocals", "drums", "bass", "other"}),
-    make_profile(stemsmith::model_profile_id::balanced_six_stem,
-                 "balanced-six-stem",
-                 "Balanced 6-Stem",
-                 "ggml-model-htdemucs-6s-f16.bin",
-                 {"vocals", "drums", "bass", "piano", "guitar", "other"})};
+constexpr std::array k_profiles{make_profile(stemsmith::model_profile_id::balanced_four_stem,
+                                             "balanced-four-stem",
+                                             "Balanced 4-Stem",
+                                             "ggml-model-htdemucs-4s-f16.bin",
+                                             {"vocals", "drums", "bass", "other"}),
+                                make_profile(stemsmith::model_profile_id::balanced_six_stem,
+                                             "balanced-six-stem",
+                                             "Balanced 6-Stem",
+                                             "ggml-model-htdemucs-6s-f16.bin",
+                                             {"vocals", "drums", "bass", "piano", "guitar", "other"})};
 
 const stemsmith::model_profile* find_profile(stemsmith::model_profile_id id)
 {
-    const auto it = std::ranges::find_if(k_profiles, [id](const stemsmith::model_profile& profile)
-                                         { return profile.id == id; });
+    const auto it =
+        std::ranges::find_if(k_profiles, [id](const stemsmith::model_profile& profile) { return profile.id == id; });
     return it == k_profiles.end() ? nullptr : &*it;
 }
 
 const stemsmith::model_profile* find_profile(std::string_view key)
 {
-    const auto it = std::ranges::find_if(k_profiles, [key](const stemsmith::model_profile& profile)
-                                         { return profile.key == key; });
+    const auto it =
+        std::ranges::find_if(k_profiles, [key](const stemsmith::model_profile& profile) { return profile.key == key; });
     return it == k_profiles.end() ? nullptr : &*it;
 }
 

@@ -29,18 +29,18 @@ job_runner::job_runner(job_config base_config,
                        separation_engine engine,
                        std::size_t worker_count,
                        std::function<void(const job_descriptor&, const job_event&)> event_callback)
-    : catalog_(std::move(base_config)), engine_(std::move(engine)),
-      pool_(
+    : catalog_(std::move(base_config))
+    , engine_(std::move(engine))
+    , pool_(
           worker_count,
-          [this](const job_descriptor& job, const std::atomic_bool& stop_flag)
-          { process_job(job, stop_flag); },
-          [this](const job_event& event) { handle_event(event); }),
-      event_callback_(std::move(event_callback))
+          [this](const job_descriptor& job, const std::atomic_bool& stop_flag) { process_job(job, stop_flag); },
+          [this](const job_event& event) { handle_event(event); })
+    , event_callback_(std::move(event_callback))
 {
 }
 
-std::expected<std::future<job_result>, std::string> job_runner::submit(
-    const std::filesystem::path& path, const job_overrides& overrides)
+std::expected<std::future<job_result>, std::string> job_runner::submit(const std::filesystem::path& path,
+                                                                       const job_overrides& overrides)
 {
     auto add_result = catalog_.add_file(path, overrides);
     if (!add_result)
@@ -201,8 +201,7 @@ void job_runner::handle_event(const job_event& event)
     }
 }
 
-std::shared_ptr<job_runner::job_context> job_runner::context_for(
-    const std::filesystem::path& path) const
+std::shared_ptr<job_runner::job_context> job_runner::context_for(const std::filesystem::path& path) const
 {
     std::lock_guard lock(mutex_);
     const auto it = contexts_.find(path);

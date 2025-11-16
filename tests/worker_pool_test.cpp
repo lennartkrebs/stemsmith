@@ -1,10 +1,9 @@
-#include <gtest/gtest.h>
-
 #include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <filesystem>
+#include <gtest/gtest.h>
 #include <latch>
 #include <mutex>
 #include <string>
@@ -61,8 +60,7 @@ TEST(worker_pool_test, process_jobs_and_emit_events)
 
     {
         std::unique_lock lock(events_mutex);
-        ASSERT_TRUE(events_cv.wait_for(lock, std::chrono::milliseconds(100),
-                                       [&] { return completed == 2; }));
+        ASSERT_TRUE(events_cv.wait_for(lock, std::chrono::milliseconds(100), [&] { return completed == 2; }));
     }
 
     pool.shutdown();
@@ -146,8 +144,7 @@ TEST(worker_pool_test, cancels_pending_jobs_on_shutdown)
 
     {
         std::unique_lock lock(events_mutex);
-        ASSERT_TRUE(
-            events_cv.wait_for(lock, std::chrono::seconds(2), [&] { return first_job_running; }));
+        ASSERT_TRUE(events_cv.wait_for(lock, std::chrono::seconds(2), [&] { return first_job_running; }));
     }
 
     pool.shutdown();
@@ -156,13 +153,13 @@ TEST(worker_pool_test, cancels_pending_jobs_on_shutdown)
 
     std::lock_guard lock(events_mutex);
     const auto cancelled = std::ranges::find_if(
-        events, [&](const job_event& event)
-        { return event.id == second_id && event.status == job_status::cancelled; });
+        events,
+        [&](const job_event& event) { return event.id == second_id && event.status == job_status::cancelled; });
     ASSERT_NE(cancelled, events.end());
 
-    const auto failed = std::ranges::find_if(
-        events, [&](const job_event& event)
-        { return event.id == first_id && event.status == job_status::failed; });
+    const auto failed = std::ranges::find_if(events,
+                                             [&](const job_event& event)
+                                             { return event.id == first_id && event.status == job_status::failed; });
     ASSERT_NE(failed, events.end());
     ASSERT_TRUE(failed->error.has_value());
     EXPECT_NE(failed->error->find("stop requested"), std::string::npos);
@@ -190,8 +187,7 @@ TEST(worker_pool_test, rejects_enqueue_after_shutdown)
 
     {
         std::unique_lock lock(processed_mutex);
-        ASSERT_TRUE(
-            processed_cv.wait_for(lock, std::chrono::seconds(2), [&] { return processed == 1; }));
+        ASSERT_TRUE(processed_cv.wait_for(lock, std::chrono::seconds(2), [&] { return processed == 1; }));
     }
 
     pool.shutdown();

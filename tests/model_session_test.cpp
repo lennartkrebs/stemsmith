@@ -1,8 +1,7 @@
-#include <gtest/gtest.h>
-
 #include <array>
 #include <expected>
 #include <filesystem>
+#include <gtest/gtest.h>
 #include <string>
 #include <vector>
 
@@ -35,27 +34,24 @@ Eigen::Tensor3dXf make_tensor(std::size_t targets, std::size_t frames)
         {
             for (std::size_t f = 0; f < frames; ++f)
             {
-                tensor(static_cast<int>(t), ch, static_cast<int>(f)) =
-                    static_cast<float>(t + ch + f);
+                tensor(static_cast<int>(t), ch, static_cast<int>(f)) = static_cast<float>(t + ch + f);
             }
         }
     }
     return tensor;
 }
 
-stemsmith::model_session make_session(const stemsmith::model_profile& profile,
-                                      Eigen::Tensor3dXf outputs)
+stemsmith::model_session make_session(const stemsmith::model_profile& profile, Eigen::Tensor3dXf outputs)
 {
     auto resolver = []() -> std::expected<std::filesystem::path, std::string>
     { return std::filesystem::path{"unused.bin"}; };
     auto loader = [](demucscpp::demucs_model&, const std::filesystem::path&)
     { return std::expected<void, std::string>{}; };
-    auto inference =
-        [tensor = std::move(outputs)](const demucscpp::demucs_model&, const Eigen::MatrixXf&,
-                                      demucscpp::ProgressCallback) mutable { return tensor; };
+    auto inference = [tensor = std::move(outputs)](const demucscpp::demucs_model&,
+                                                   const Eigen::MatrixXf&,
+                                                   demucscpp::ProgressCallback) mutable { return tensor; };
 
-    return stemsmith::model_session(profile, std::move(resolver), std::move(loader),
-                                    std::move(inference));
+    return stemsmith::model_session(profile, std::move(resolver), std::move(loader), std::move(inference));
 }
 } // namespace
 

@@ -1,8 +1,5 @@
 #include "stemsmith/model_cache.h"
 
-#include "stemsmith/model_manifest.h"
-#include "stemsmith/weight_fetcher.h"
-
 #include <expected>
 #include <fstream>
 #include <iterator>
@@ -10,19 +7,19 @@
 #include <vector>
 
 #include "picosha2.h"
+#include "stemsmith/model_manifest.h"
+#include "stemsmith/weight_fetcher.h"
 
 namespace
 {
 using stemsmith::model_manifest_entry;
 
-std::filesystem::path model_path(const std::filesystem::path& root,
-                                 const model_manifest_entry& entry)
+std::filesystem::path model_path(const std::filesystem::path& root, const model_manifest_entry& entry)
 {
     return root / entry.profile_key / entry.filename;
 }
 
-std::expected<bool, std::string> file_ready(const std::filesystem::path& path,
-                                            const model_manifest_entry& entry)
+std::expected<bool, std::string> file_ready(const std::filesystem::path& path, const model_manifest_entry& entry)
 {
     std::error_code ec;
     if (!std::filesystem::exists(path, ec))
@@ -82,8 +79,9 @@ std::expected<model_cache, std::string> model_cache::create(std::filesystem::pat
 model_cache::model_cache(std::filesystem::path cache_root,
                          std::shared_ptr<weight_fetcher> fetcher,
                          model_manifest manifest)
-    : cache_root_(std::move(cache_root)), fetcher_(std::move(fetcher)),
-      manifest_(std::move(manifest))
+    : cache_root_(std::move(cache_root))
+    , fetcher_(std::move(fetcher))
+    , manifest_(std::move(manifest))
 {
 }
 
@@ -175,8 +173,8 @@ std::expected<model_handle, std::string> model_cache::hydrate(model_profile_id p
     return download_and_stage(profile, entry);
 }
 
-std::expected<model_handle, std::string> model_cache::download_and_stage(
-    model_profile_id profile, const model_manifest_entry& entry) const
+std::expected<model_handle, std::string> model_cache::download_and_stage(model_profile_id profile,
+                                                                         const model_manifest_entry& entry) const
 {
     const auto target_path = model_path(cache_root_, entry);
     std::filesystem::path staging = target_path;

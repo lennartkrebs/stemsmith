@@ -1,17 +1,17 @@
 #pragma once
 
-#include "stemsmith/job_catalog.h"
-#include "stemsmith/separation_engine.h"
-#include "stemsmith/worker_pool.h"
-
 #include <expected>
-#include <future>
 #include <functional>
+#include <future>
 #include <mutex>
 #include <optional>
 #include <thread>
-#include <vector>
 #include <unordered_map>
+#include <vector>
+
+#include "stemsmith/job_catalog.h"
+#include "stemsmith/separation_engine.h"
+#include "stemsmith/worker_pool.h"
 
 namespace stemsmith
 {
@@ -26,7 +26,7 @@ struct job_result
 
 class job_runner
 {
-  public:
+public:
     job_runner(job_config base_config,
                model_cache& cache,
                std::filesystem::path output_root,
@@ -41,7 +41,7 @@ class job_runner
     std::expected<std::future<job_result>, std::string> submit(const std::filesystem::path& path,
                                                                const job_overrides& overrides = {});
 
-  private:
+private:
     struct job_context
     {
         std::promise<job_result> promise;

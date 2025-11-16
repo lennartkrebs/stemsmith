@@ -1,10 +1,78 @@
+# .clang-format
+
 BasedOnStyle: LLVM
+
+Language: Cpp
+
+# --- Indentation & spacing ---
 IndentWidth: 4
-ColumnLimit: 100
-AllowShortIfStatementsOnASingleLine: false
-BreakBeforeBraces: Allman
-SortIncludes: false
+TabWidth: 4
+UseTab: Never
+AccessModifierOffset: -4
+
+SpacesInParentheses: false
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceBeforeAssignmentOperators: true
+SpaceAfterCStyleCast: false
 PointerAlignment: Left
-AlwaysBreakAfterReturnType: None
-PenaltyReturnTypeOnItsOwnLine: 1000000
+
+# --- Braces: Allman style ---
+BreakBeforeBraces: Allman
+BraceWrapping:
+  AfterClass: true
+  AfterControlStatement: true
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+  AfterUnion: true
+  BeforeElse: true
+  BeforeCatch: true
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+
+# --- Function declaration & call arguments ---
 BinPackParameters: false
+BinPackArguments: false
+
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowAllArgumentsOnNextLine: false
+
+AlignAfterOpenBracket: Align
+AlignOperands: Align
+BreakConstructorInitializers: BeforeComma
+ConstructorInitializerIndentWidth: 4
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+AllowAllConstructorInitializersOnNextLine: false
+IndentWrappedFunctionNames: false
+
+# --- Line breaking ---
+ColumnLimit: 120
+PenaltyReturnTypeOnItsOwnLine: 200
+PenaltyBreakBeforeFirstCallParameter: 19
+PenaltyBreakString: 1000
+
+# --- Control of short things on one line ---
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: False
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortBlocksOnASingleLine: Never
+
+# --- Includes ---
+IncludeBlocks: Regroup
+SortIncludes: true
+IncludeCategories:
+  - Regex: '^<[^"]+>$'
+    Priority: 1
+  - Regex: '^".+"$'
+    Priority: 2
+
+# --- Namespace handling ---
+NamespaceIndentation: None
+
+# --- Misc ---
+Standard: c++20
+Cpp11BracedListStyle: true
+SpaceInEmptyParentheses: false

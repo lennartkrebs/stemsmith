@@ -1,26 +1,26 @@
 #include "stemsmith/stemsmith.h"
 
-#include "stemsmith/model_cache.h"
-#include "stemsmith/weight_fetcher.h"
-
 #include <memory>
 #include <system_error>
+
+#include "stemsmith/model_cache.h"
+#include "stemsmith/weight_fetcher.h"
 
 namespace stemsmith
 {
 
 service::service(std::shared_ptr<model_cache> cache, std::unique_ptr<job_runner> runner)
-    : cache_(std::move(cache)), runner_(std::move(runner))
+    : cache_(std::move(cache))
+    , runner_(std::move(runner))
 {
 }
 
-std::expected<std::unique_ptr<service>, std::string> service::create(
-    job_config config,
-    std::filesystem::path cache_root,
-    std::filesystem::path output_root,
-    std::shared_ptr<weight_fetcher> fetcher,
-    std::size_t worker_count,
-    event_callback callback)
+std::expected<std::unique_ptr<service>, std::string> service::create(job_config config,
+                                                                     std::filesystem::path cache_root,
+                                                                     std::filesystem::path output_root,
+                                                                     std::shared_ptr<weight_fetcher> fetcher,
+                                                                     std::size_t worker_count,
+                                                                     event_callback callback)
 {
     if (!fetcher)
     {
@@ -53,8 +53,11 @@ std::expected<std::unique_ptr<service>, std::string> service::create(
     }
     auto cache_ptr = std::make_shared<model_cache>(std::move(cache_result.value()));
 
-    auto runner = std::make_unique<job_runner>(
-        std::move(config), *cache_ptr, std::move(output_root), worker_count, std::move(callback));
+    auto runner = std::make_unique<job_runner>(std::move(config),
+                                               *cache_ptr,
+                                               std::move(output_root),
+                                               worker_count,
+                                               std::move(callback));
 
     return std::unique_ptr<service>(new service(std::move(cache_ptr), std::move(runner)));
 }

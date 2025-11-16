@@ -1,7 +1,5 @@
 #include "stemsmith/worker_pool.h"
 
-#include "stemsmith/job_catalog.h"
-
 #include <atomic>
 #include <condition_variable>
 #include <deque>
@@ -11,6 +9,8 @@
 #include <thread>
 #include <utility>
 #include <vector>
+
+#include "stemsmith/job_catalog.h"
 
 namespace stemsmith
 {
@@ -34,7 +34,8 @@ struct worker_pool::impl
     std::atomic_bool stop_requested{false};
 
     explicit impl(std::size_t thread_count, job_processor processor_fn, job_callback callback_fn)
-        : processor(std::move(processor_fn)), callback(std::move(callback_fn))
+        : processor(std::move(processor_fn))
+        , callback(std::move(callback_fn))
     {
         if (!processor)
         {
@@ -53,9 +54,15 @@ struct worker_pool::impl
         }
     }
 
-    ~impl() { shutdown(); }
+    ~impl()
+    {
+        shutdown();
+    }
 
-    [[nodiscard]] bool is_shutdown() const noexcept { return shutting_down; }
+    [[nodiscard]] bool is_shutdown() const noexcept
+    {
+        return shutting_down;
+    }
 
     std::size_t enqueue(job_descriptor job)
     {
@@ -194,7 +201,13 @@ std::size_t worker_pool::enqueue(job_descriptor job) const
     return impl_->enqueue(std::move(job));
 }
 
-void worker_pool::shutdown() const { impl_->shutdown(); }
+void worker_pool::shutdown() const
+{
+    impl_->shutdown();
+}
 
-bool worker_pool::is_shutdown() const noexcept { return impl_->is_shutdown(); }
+bool worker_pool::is_shutdown() const noexcept
+{
+    return impl_->is_shutdown();
+}
 } // namespace stemsmith

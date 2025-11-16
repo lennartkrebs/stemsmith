@@ -19,6 +19,9 @@ struct audio_buffer
         return channels == 0 ? 0 : samples.size() / channels;
     }
 
-    [[nodiscard]] bool empty() const noexcept { return samples.empty(); }
+    [[nodiscard]] bool empty() const noexcept
+    {
+        return samples.empty();
+    }
 };
 } // namespace stemsmith

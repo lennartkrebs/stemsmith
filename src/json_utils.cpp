@@ -1,4 +1,5 @@
 #include "stemsmith/json_utils.h"
+
 #include <filesystem>
 #include <fstream>
 #include <optional>
@@ -6,8 +7,8 @@
 
 namespace stemsmith::utils
 {
-std::expected<nlohmann::json, std::string> load_json_file(
-    const std::filesystem::path& path, std::optional<std::string> expected_extension)
+std::expected<nlohmann::json, std::string> load_json_file(const std::filesystem::path& path,
+                                                          std::optional<std::string> expected_extension)
 {
     if (expected_extension.has_value() && path.extension() != expected_extension.value())
     {

@@ -1,14 +1,14 @@
 #pragma once
 
-#include "stemsmith/weight_fetcher.h"
-
 #include <chrono>
+
+#include "stemsmith/weight_fetcher.h"
 
 namespace stemsmith
 {
 class http_weight_fetcher final : public weight_fetcher
 {
-  public:
+public:
     explicit http_weight_fetcher(std::chrono::seconds timeout = std::chrono::seconds{30});
     ~http_weight_fetcher() override;
 
@@ -16,7 +16,7 @@ class http_weight_fetcher final : public weight_fetcher
                                                    const std::filesystem::path& destination,
                                                    progress_callback progress = {}) override;
 
-  private:
+private:
     std::chrono::seconds timeout_;
 };
 } // namespace stemsmith

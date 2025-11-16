@@ -1,13 +1,12 @@
-#include "stemsmith/stemsmith.h"
-
-#include "stemsmith/http_weight_fetcher.h"
-
 #include <chrono>
 #include <filesystem>
 #include <future>
 #include <iomanip>
 #include <iostream>
 #include <string>
+
+#include "stemsmith/http_weight_fetcher.h"
+#include "stemsmith/stemsmith.h"
 
 namespace
 {
@@ -50,14 +49,17 @@ int main()
 
     auto fetcher = std::make_shared<http_weight_fetcher>();
     auto service_result = service::create(
-        config, cache_root, output_root, fetcher, 1,
+        config,
+        cache_root,
+        output_root,
+        fetcher,
+        1,
         [](const job_descriptor& job, const job_event& event)
         {
             if (event.progress >= 0.0f)
             {
-                print_progress_bar(event.progress, event.message.empty()
-                                                       ? job.input_path.filename().string()
-                                                       : event.message);
+                print_progress_bar(event.progress,
+                                   event.message.empty() ? job.input_path.filename().string() : event.message);
             }
             else if (event.status == job_status::queued)
             {
@@ -66,8 +68,7 @@ int main()
         });
     if (!service_result)
     {
-        std::cerr << "Failed to initialize Stemsmith service: " << service_result.error()
-                  << std::endl;
+        std::cerr << "Failed to initialize Stemsmith service: " << service_result.error() << std::endl;
         return 1;
     }
 
@@ -89,8 +90,7 @@ int main()
     const auto result = future->get();
     if (result.status != job_status::completed)
     {
-        std::cerr << "Separation failed: " << (result.error ? *result.error : "unknown error")
-                  << std::endl;
+        std::cerr << "Separation failed: " << (result.error ? *result.error : "unknown error") << std::endl;
         return 1;
     }
 

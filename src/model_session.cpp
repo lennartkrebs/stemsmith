@@ -1,9 +1,8 @@
 #include "stemsmith/model_session.h"
 
+#include <Eigen/Dense>
 #include <algorithm>
 #include <stdexcept>
-
-#include <Eigen/Dense>
 
 namespace
 {
@@ -55,8 +54,10 @@ model_session::model_session(model_profile profile,
                              weight_resolver resolver,
                              loader_function loader,
                              inference_function inference)
-    : profile_(profile), resolver_(std::move(resolver)), loader_(std::move(loader)),
-      inference_(std::move(inference))
+    : profile_(profile)
+    , resolver_(std::move(resolver))
+    , loader_(std::move(loader))
+    , inference_(std::move(inference))
 {
 }
 
@@ -105,9 +106,9 @@ std::expected<std::vector<std::size_t>, std::string> model_session::resolve_stem
     indices.reserve(stems.size());
     for (const auto requested : stems)
     {
-        const auto it =
-            std::find_if(profile_.stems.begin(), profile_.stems.begin() + profile_.stem_count,
-                         [&](std::string_view stem) { return stem == requested; });
+        const auto it = std::find_if(profile_.stems.begin(),
+                                     profile_.stems.begin() + profile_.stem_count,
+                                     [&](std::string_view stem) { return stem == requested; });
 
         if (it == profile_.stems.begin() + profile_.stem_count)
         {

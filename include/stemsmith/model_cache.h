@@ -1,14 +1,14 @@
 #pragma once
 
-#include "stemsmith/job_catalog.h"
-#include "stemsmith/model_manifest.h"
-
 #include <expected>
 #include <filesystem>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <string>
+
+#include "stemsmith/job_catalog.h"
+#include "stemsmith/model_manifest.h"
 
 namespace stemsmith
 {
@@ -28,13 +28,11 @@ struct model_handle
  */
 class model_cache
 {
-  public:
+public:
     static std::expected<model_cache, std::string> create(std::filesystem::path cache_root,
                                                           std::shared_ptr<weight_fetcher> fetcher);
 
-    model_cache(std::filesystem::path cache_root,
-                std::shared_ptr<weight_fetcher> fetcher,
-                model_manifest manifest);
+    model_cache(std::filesystem::path cache_root, std::shared_ptr<weight_fetcher> fetcher, model_manifest manifest);
 
     // Disable copy, enable move
     model_cache(model_cache&&) noexcept = default;
@@ -42,7 +40,10 @@ class model_cache
     model_cache(const model_cache&) = delete;
     model_cache& operator=(const model_cache&) = delete;
 
-    [[nodiscard]] const std::filesystem::path& root() const noexcept { return cache_root_; }
+    [[nodiscard]] const std::filesystem::path& root() const noexcept
+    {
+        return cache_root_;
+    }
 
     std::expected<model_handle, std::string> ensure_ready(model_profile_id profile);
     std::expected<void, std::string> purge(model_profile_id profile) const;
@@ -51,7 +52,7 @@ class model_cache
     static std::expected<bool, std::string> verify_checksum(const std::filesystem::path& path,
                                                             const model_manifest_entry& entry);
 
-  private:
+private:
     std::filesystem::path cache_root_;
     std::shared_ptr<weight_fetcher> fetcher_;
     model_manifest manifest_;
@@ -63,9 +64,8 @@ class model_cache
     std::map<model_profile_id, std::unique_ptr<profile_state>> profile_states_;
 
     profile_state& state_for(model_profile_id profile);
-    std::expected<model_handle, std::string> hydrate(model_profile_id profile,
-                                                     const model_manifest_entry& entry);
-    std::expected<model_handle, std::string> download_and_stage(
-        model_profile_id profile, const model_manifest_entry& entry) const;
+    std::expected<model_handle, std::string> hydrate(model_profile_id profile, const model_manifest_entry& entry);
+    std::expected<model_handle, std::string> download_and_stage(model_profile_id profile,
+                                                                const model_manifest_entry& entry) const;
 };
 } // namespace stemsmith

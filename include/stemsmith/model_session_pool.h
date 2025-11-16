@@ -1,9 +1,5 @@
 #pragma once
 
-#include "stemsmith/job_config.h"
-#include "stemsmith/model_cache.h"
-#include "stemsmith/model_session.h"
-
 #include <expected>
 #include <functional>
 #include <map>
@@ -11,15 +7,18 @@
 #include <mutex>
 #include <vector>
 
+#include "stemsmith/job_config.h"
+#include "stemsmith/model_cache.h"
+#include "stemsmith/model_session.h"
+
 namespace stemsmith
 {
 
 class model_session_pool
 {
-  public:
+public:
     using session_ptr = std::unique_ptr<model_session>;
-    using session_factory =
-        std::function<std::expected<session_ptr, std::string>(model_profile_id)>;
+    using session_factory = std::function<std::expected<session_ptr, std::string>(model_profile_id)>;
 
     explicit model_session_pool(model_cache& cache);
     explicit model_session_pool(session_factory factory);
@@ -29,7 +28,7 @@ class model_session_pool
 
     class session_handle
     {
-      public:
+    public:
         session_handle() = default;
         ~session_handle();
 
@@ -43,7 +42,7 @@ class model_session_pool
         model_session* operator->() const noexcept;
         model_session* get() const noexcept;
 
-      private:
+    private:
         friend class model_session_pool;
         session_handle(model_session_pool* pool, model_profile_id profile, session_ptr session);
         void release();
@@ -55,7 +54,7 @@ class model_session_pool
 
     [[nodiscard]] std::expected<session_handle, std::string> acquire(model_profile_id profile);
 
-  private:
+private:
     /**
      * @brief Bucket of idle sessions for a specific model profile.
      */
