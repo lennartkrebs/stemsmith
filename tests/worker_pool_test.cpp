@@ -18,8 +18,7 @@ namespace
 {
 stemsmith::job_descriptor make_job(const std::string& path)
 {
-    return stemsmith::job_descriptor{
-        std::filesystem::path{path}, stemsmith::job_config{}};
+    return stemsmith::job_descriptor{std::filesystem::path{path}, stemsmith::job_config{}};
 }
 } // namespace
 
@@ -37,13 +36,15 @@ TEST(worker_pool_test, process_jobs_and_emit_events)
     std::latch start_latch(1);
     const worker_pool pool(
         1,
-        [&](const job_descriptor& job, const std::atomic_bool& stop_flag) {
+        [&](const job_descriptor& job, const std::atomic_bool& stop_flag)
+        {
             start_latch.wait();
             ASSERT_FALSE(stop_flag.load());
             std::lock_guard lock(processed_mutex);
             processed_paths.push_back(job.input_path.string());
         },
-        [&](const job_event& event) {
+        [&](const job_event& event)
+        {
             std::lock_guard lock(events_mutex);
             events.push_back(event);
             if (event.status == job_status::completed)
@@ -60,9 +61,8 @@ TEST(worker_pool_test, process_jobs_and_emit_events)
 
     {
         std::unique_lock lock(events_mutex);
-        ASSERT_TRUE(events_cv.wait_for(lock,
-            std::chrono::milliseconds(100),
-            [&] { return completed == 2; }));
+        ASSERT_TRUE(events_cv.wait_for(lock, std::chrono::milliseconds(100),
+                                       [&] { return completed == 2; }));
     }
 
     pool.shutdown();
@@ -76,7 +76,8 @@ TEST(worker_pool_test, process_jobs_and_emit_events)
     {
         std::lock_guard lock(events_mutex);
         ASSERT_EQ(events.size(), 6U);
-        const auto statuses_for = [&](std::size_t id) {
+        const auto statuses_for = [&](std::size_t id)
+        {
             std::vector<job_status> statuses;
             for (const auto& event : events)
             {
@@ -113,7 +114,8 @@ TEST(worker_pool_test, cancels_pending_jobs_on_shutdown)
 
     const worker_pool pool(
         1,
-        [&](const job_descriptor&, const std::atomic_bool& stop_flag) {
+        [&](const job_descriptor&, const std::atomic_bool& stop_flag)
+        {
             processor_calls.fetch_add(1);
             {
                 std::lock_guard lock(events_mutex);
@@ -128,7 +130,8 @@ TEST(worker_pool_test, cancels_pending_jobs_on_shutdown)
 
             throw std::runtime_error("stop requested");
         },
-        [&](const job_event& event) {
+        [&](const job_event& event)
+        {
             std::lock_guard lock(events_mutex);
             events.push_back(event);
             if (event.status == job_status::running && event.id == 0)
@@ -143,9 +146,8 @@ TEST(worker_pool_test, cancels_pending_jobs_on_shutdown)
 
     {
         std::unique_lock lock(events_mutex);
-        ASSERT_TRUE(events_cv.wait_for(lock,
-            std::chrono::seconds(2),
-            [&] { return first_job_running; }));
+        ASSERT_TRUE(
+            events_cv.wait_for(lock, std::chrono::seconds(2), [&] { return first_job_running; }));
     }
 
     pool.shutdown();
@@ -153,16 +155,14 @@ TEST(worker_pool_test, cancels_pending_jobs_on_shutdown)
     EXPECT_EQ(processor_calls.load(), 1);
 
     std::lock_guard lock(events_mutex);
-    const auto cancelled = std::ranges::find_if(events,
-                                                [&](const job_event& event) {
-                                                    return event.id == second_id && event.status == job_status::cancelled;
-                                                });
+    const auto cancelled = std::ranges::find_if(
+        events, [&](const job_event& event)
+        { return event.id == second_id && event.status == job_status::cancelled; });
     ASSERT_NE(cancelled, events.end());
 
-    const auto failed = std::ranges::find_if(events,
-                                             [&](const job_event& event) {
-                                                 return event.id == first_id && event.status == job_status::failed;
-                                             });
+    const auto failed = std::ranges::find_if(
+        events, [&](const job_event& event)
+        { return event.id == first_id && event.status == job_status::failed; });
     ASSERT_NE(failed, events.end());
     ASSERT_TRUE(failed->error.has_value());
     EXPECT_NE(failed->error->find("stop requested"), std::string::npos);
@@ -174,25 +174,24 @@ TEST(worker_pool_test, rejects_enqueue_after_shutdown)
     std::mutex processed_mutex;
     std::condition_variable processed_cv;
 
-    const worker_pool pool(
-        1,
-        [&](const job_descriptor&, const std::atomic_bool& stop_flag) {
-            EXPECT_FALSE(stop_flag.load());
-            {
-                std::lock_guard lock(processed_mutex);
-                processed = 1;
-            }
-            processed_cv.notify_all();
-        });
+    const worker_pool pool(1,
+                           [&](const job_descriptor&, const std::atomic_bool& stop_flag)
+                           {
+                               EXPECT_FALSE(stop_flag.load());
+                               {
+                                   std::lock_guard lock(processed_mutex);
+                                   processed = 1;
+                               }
+                               processed_cv.notify_all();
+                           });
 
     const auto first_id = pool.enqueue(make_job("/music/first.wav"));
     EXPECT_EQ(first_id, 0U);
 
     {
         std::unique_lock lock(processed_mutex);
-        ASSERT_TRUE(processed_cv.wait_for(lock,
-            std::chrono::seconds(2),
-            [&] { return processed == 1; }));
+        ASSERT_TRUE(
+            processed_cv.wait_for(lock, std::chrono::seconds(2), [&] { return processed == 1; }));
     }
 
     pool.shutdown();

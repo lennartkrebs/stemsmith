@@ -15,19 +15,19 @@ namespace stemsmith
 TEST(separation_engine_test, processes_job_and_writes_stems)
 {
     std::vector<std::pair<std::filesystem::path, audio_buffer>> writes;
-    auto writer = [&](const std::filesystem::path& path, const audio_buffer& buffer) -> std::expected<void, std::string> {
+    auto writer = [&](const std::filesystem::path& path,
+                      const audio_buffer& buffer) -> std::expected<void, std::string>
+    {
         writes.emplace_back(path, buffer);
         return {};
     };
 
-    auto loader = [](const std::filesystem::path&) -> std::expected<audio_buffer, std::string> {
-        return test::make_buffer(4);
-    };
+    auto loader = [](const std::filesystem::path&) -> std::expected<audio_buffer, std::string>
+    { return test::make_buffer(4); };
 
-    model_session_pool pool(
-        [](model_profile_id profile_id) -> std::expected<std::unique_ptr<model_session>, std::string> {
-            return test::make_stub_session(profile_id);
-        });
+    model_session_pool pool([](model_profile_id profile_id)
+                                -> std::expected<std::unique_ptr<model_session>, std::string>
+                            { return test::make_stub_session(profile_id); });
 
     const auto output_root = std::filesystem::temp_directory_path() / "stemsmith-sep-test";
     std::filesystem::remove_all(output_root);
@@ -48,17 +48,14 @@ TEST(separation_engine_test, processes_job_and_writes_stems)
 TEST(separation_engine_test, propagates_loader_errors)
 {
     model_session_pool pool(
-        [](model_profile_id) -> std::expected<std::unique_ptr<model_session>, std::string> {
-            return test::make_stub_session(model_profile_id::balanced_four_stem);
-        });
+        [](model_profile_id) -> std::expected<std::unique_ptr<model_session>, std::string>
+        { return test::make_stub_session(model_profile_id::balanced_four_stem); });
 
-    auto loader = [](const std::filesystem::path&) -> std::expected<audio_buffer, std::string> {
-        return std::unexpected("fail");
-    };
+    auto loader = [](const std::filesystem::path&) -> std::expected<audio_buffer, std::string>
+    { return std::unexpected("fail"); };
 
-    auto writer = [](const std::filesystem::path&, const audio_buffer&) -> std::expected<void, std::string> {
-        return {};
-    };
+    auto writer = [](const std::filesystem::path&,
+                     const audio_buffer&) -> std::expected<void, std::string> { return {}; };
 
     separation_engine engine(std::move(pool), std::filesystem::path{"out"}, loader, writer);
 

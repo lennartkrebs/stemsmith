@@ -20,9 +20,9 @@ enum class model_profile_id
 struct model_profile
 {
     model_profile_id id;
-    std::string_view key; // stable config key, e.g. "balanced-six-stem"
-    std::string_view label; // human readable label for UIs
-    std::string_view weight_filename; // Demucs weight file name
+    std::string_view key;                  // stable config key, e.g. "balanced-six-stem"
+    std::string_view label;                // human readable label for UIs
+    std::string_view weight_filename;      // Demucs weight file name
     std::array<std::string_view, 6> stems; // ordered list of stems for the profile
     std::size_t stem_count;
 };

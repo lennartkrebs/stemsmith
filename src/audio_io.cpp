@@ -45,7 +45,10 @@ std::expected<std::vector<float>, std::string> ensure_supported_channels(const n
     return std::unexpected("Only mono or stereo inputs are supported");
 }
 
-std::expected<std::vector<float>, std::string> resample_if_needed(const std::vector<float>& samples, std::size_t channels, int source_rate, int target_rate)
+std::expected<std::vector<float>, std::string> resample_if_needed(const std::vector<float>& samples,
+                                                                  std::size_t channels,
+                                                                  int source_rate,
+                                                                  int target_rate)
 {
     if (source_rate == target_rate || samples.empty())
     {
@@ -72,7 +75,8 @@ std::expected<std::vector<float>, std::string> resample_if_needed(const std::vec
     request.output_frames = static_cast<long>(max_output_frames);
     request.end_of_input = 1;
 
-    if (const int result = src_simple(&request, SRC_SINC_BEST_QUALITY, static_cast<int>(channels)); result != 0)
+    if (const int result = src_simple(&request, SRC_SINC_BEST_QUALITY, static_cast<int>(channels));
+        result != 0)
     {
         return std::unexpected(src_strerror(result));
     }
@@ -112,7 +116,8 @@ std::expected<audio_buffer, std::string> load_audio_file(const std::filesystem::
         return std::unexpected(samples.error());
     }
 
-    const auto resampled = resample_if_needed(*samples, TARGET_NUM_CHANNELS, file_data->sampleRate, TARGET_SAMPLE_RATE);
+    const auto resampled = resample_if_needed(*samples, TARGET_NUM_CHANNELS, file_data->sampleRate,
+                                              TARGET_SAMPLE_RATE);
     if (!resampled)
     {
         return std::unexpected(resampled.error());
@@ -126,7 +131,9 @@ std::expected<audio_buffer, std::string> load_audio_file(const std::filesystem::
     return buffer;
 }
 
-std::expected<void, std::string> write_audio_file(const std::filesystem::path& path, const audio_buffer& buffer, audio_format format)
+std::expected<void, std::string> write_audio_file(const std::filesystem::path& path,
+                                                  const audio_buffer& buffer,
+                                                  audio_format format)
 {
     if (format != audio_format::wav)
     {
@@ -154,10 +161,9 @@ std::expected<void, std::string> write_audio_file(const std::filesystem::path& p
     file_data->channelCount = static_cast<int>(buffer.channels);
     file_data->samples = buffer.samples;
 
-    const int status = encode_wav_to_disk(
-        {file_data->channelCount, nqr::PCM_FLT, nqr::DITHER_TRIANGLE},
-        file_data.get(),
-        path.string());
+    const int status =
+        encode_wav_to_disk({file_data->channelCount, nqr::PCM_FLT, nqr::DITHER_TRIANGLE},
+                           file_data.get(), path.string());
 
     if (status != nqr::EncoderError::NoError)
     {

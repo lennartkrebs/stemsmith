@@ -9,14 +9,15 @@ namespace
 {
 constexpr int kExpectedChannels = 2;
 constexpr int kExpectedSampleRate = demucscpp::SUPPORTED_SAMPLE_RATE;
-}
+} // namespace
 
 namespace stemsmith
 {
 
 namespace
 {
-std::expected<void, std::string> default_loader(demucscpp::demucs_model& model, const std::filesystem::path& weights_path)
+std::expected<void, std::string> default_loader(demucscpp::demucs_model& model,
+                                                const std::filesystem::path& weights_path)
 {
     if (!demucscpp::load_demucs_model(weights_path.string(), &model))
     {
@@ -25,7 +26,9 @@ std::expected<void, std::string> default_loader(demucscpp::demucs_model& model, 
     return {};
 }
 
-Eigen::Tensor3dXf default_inference(const demucscpp::demucs_model& model, const Eigen::MatrixXf& audio, const demucscpp::ProgressCallback& cb)
+Eigen::Tensor3dXf default_inference(const demucscpp::demucs_model& model,
+                                    const Eigen::MatrixXf& audio,
+                                    const demucscpp::ProgressCallback& cb)
 {
     return demucscpp::demucs_inference(model, audio, cb);
 }
@@ -33,26 +36,29 @@ Eigen::Tensor3dXf default_inference(const demucscpp::demucs_model& model, const 
 
 model_session::model_session(model_profile profile, model_cache& cache)
     : model_session(
-        profile,
-        [&cache, profile]() -> std::expected<std::filesystem::path, std::string> {
-            auto handle = cache.ensure_ready(profile.id);
-            if (!handle)
-            {
-                return std::unexpected(handle.error());
-            }
-            return handle->weights_path;
-        },
-        default_loader,
-        default_inference)
+          profile,
+          [&cache, profile]() -> std::expected<std::filesystem::path, std::string>
+          {
+              auto handle = cache.ensure_ready(profile.id);
+              if (!handle)
+              {
+                  return std::unexpected(handle.error());
+              }
+              return handle->weights_path;
+          },
+          default_loader,
+          default_inference)
 {
 }
 
-model_session::model_session(model_profile profile, weight_resolver resolver, loader_function loader, inference_function inference)
-    : profile_(profile)
-    , resolver_(std::move(resolver))
-    , loader_(std::move(loader))
-    , inference_(std::move(inference))
-{}
+model_session::model_session(model_profile profile,
+                             weight_resolver resolver,
+                             loader_function loader,
+                             inference_function inference)
+    : profile_(profile), resolver_(std::move(resolver)), loader_(std::move(loader)),
+      inference_(std::move(inference))
+{
+}
 
 std::expected<demucscpp::demucs_model*, std::string> model_session::ensure_model_loaded()
 {
@@ -82,7 +88,8 @@ std::expected<demucscpp::demucs_model*, std::string> model_session::ensure_model
     return model_.get();
 }
 
-std::expected<std::vector<std::size_t>, std::string> model_session::resolve_stem_indices(std::span<const std::string_view> stems) const
+std::expected<std::vector<std::size_t>, std::string> model_session::resolve_stem_indices(
+    std::span<const std::string_view> stems) const
 {
     std::vector<std::size_t> indices;
     if (stems.empty())
@@ -98,8 +105,9 @@ std::expected<std::vector<std::size_t>, std::string> model_session::resolve_stem
     indices.reserve(stems.size());
     for (const auto requested : stems)
     {
-        const auto it = std::find_if(profile_.stems.begin(), profile_.stems.begin() + profile_.stem_count,
-            [&](std::string_view stem) { return stem == requested; });
+        const auto it =
+            std::find_if(profile_.stems.begin(), profile_.stems.begin() + profile_.stem_count,
+                         [&](std::string_view stem) { return stem == requested; });
 
         if (it == profile_.stems.begin() + profile_.stem_count)
         {
@@ -111,7 +119,10 @@ std::expected<std::vector<std::size_t>, std::string> model_session::resolve_stem
     return indices;
 }
 
-std::expected<separation_result, std::string> model_session::separate(const audio_buffer& input, std::span<const std::string_view> stems_to_extract, demucscpp::ProgressCallback progress_cb)
+std::expected<separation_result, std::string> model_session::separate(
+    const audio_buffer& input,
+    std::span<const std::string_view> stems_to_extract,
+    demucscpp::ProgressCallback progress_cb)
 {
     if (input.channels != kExpectedChannels)
     {
@@ -169,7 +180,8 @@ std::expected<separation_result, std::string> model_session::separate(const audi
         {
             for (int ch = 0; ch < kExpectedChannels; ++ch)
             {
-                stem_buffer.samples[frame * kExpectedChannels + ch] = outputs(idx, ch, static_cast<Eigen::Index>(frame));
+                stem_buffer.samples[frame * kExpectedChannels + ch] =
+                    outputs(idx, ch, static_cast<Eigen::Index>(frame));
             }
         }
 

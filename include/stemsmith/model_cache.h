@@ -28,10 +28,13 @@ struct model_handle
  */
 class model_cache
 {
-public:
-    static std::expected<model_cache, std::string> create(std::filesystem::path cache_root, std::shared_ptr<weight_fetcher> fetcher);
+  public:
+    static std::expected<model_cache, std::string> create(std::filesystem::path cache_root,
+                                                          std::shared_ptr<weight_fetcher> fetcher);
 
-    model_cache(std::filesystem::path cache_root, std::shared_ptr<weight_fetcher> fetcher, model_manifest manifest);
+    model_cache(std::filesystem::path cache_root,
+                std::shared_ptr<weight_fetcher> fetcher,
+                model_manifest manifest);
 
     // Disable copy, enable move
     model_cache(model_cache&&) noexcept = default;
@@ -45,9 +48,10 @@ public:
     std::expected<void, std::string> purge(model_profile_id profile) const;
     std::expected<void, std::string> purge_all() const;
 
-    static std::expected<bool, std::string> verify_checksum(const std::filesystem::path& path, const model_manifest_entry& entry);
+    static std::expected<bool, std::string> verify_checksum(const std::filesystem::path& path,
+                                                            const model_manifest_entry& entry);
 
-private:
+  private:
     std::filesystem::path cache_root_;
     std::shared_ptr<weight_fetcher> fetcher_;
     model_manifest manifest_;
@@ -59,7 +63,9 @@ private:
     std::map<model_profile_id, std::unique_ptr<profile_state>> profile_states_;
 
     profile_state& state_for(model_profile_id profile);
-    std::expected<model_handle, std::string> hydrate(model_profile_id profile, const model_manifest_entry& entry);
-    std::expected<model_handle, std::string> download_and_stage(model_profile_id profile, const model_manifest_entry& entry) const;
+    std::expected<model_handle, std::string> hydrate(model_profile_id profile,
+                                                     const model_manifest_entry& entry);
+    std::expected<model_handle, std::string> download_and_stage(
+        model_profile_id profile, const model_manifest_entry& entry) const;
 };
 } // namespace stemsmith

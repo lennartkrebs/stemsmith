@@ -5,8 +5,7 @@
 
 namespace
 {
-bool stem_supported(const std::string& stem,
-                    const stemsmith::model_profile& profile)
+bool stem_supported(const std::string& stem, const stemsmith::model_profile& profile)
 {
     for (std::size_t i = 0; i < profile.stem_count; ++i)
     {
@@ -21,8 +20,7 @@ bool stem_supported(const std::string& stem,
 
 namespace stemsmith
 {
-job_catalog::job_catalog(job_config base_config,
-                         exists_function exists_provider)
+job_catalog::job_catalog(job_config base_config, exists_function exists_provider)
     : base_config_(std::move(base_config))
 {
     if (exists_provider)
@@ -31,16 +29,16 @@ job_catalog::job_catalog(job_config base_config,
     }
     else
     {
-        exists_ = [](const std::filesystem::path& path) {
+        exists_ = [](const std::filesystem::path& path)
+        {
             std::error_code ec;
             return std::filesystem::exists(path, ec);
         };
     }
 }
 
-std::expected<std::size_t, std::string>
-job_catalog::add_file(const std::filesystem::path& path,
-                      const job_overrides& overrides)
+std::expected<std::size_t, std::string> job_catalog::add_file(const std::filesystem::path& path,
+                                                              const job_overrides& overrides)
 {
     if (path.empty())
     {
@@ -51,14 +49,12 @@ job_catalog::add_file(const std::filesystem::path& path,
 
     if (!exists_(normalized))
     {
-        return std::unexpected("Input file does not exist: " +
-                               normalized.string());
+        return std::unexpected("Input file does not exist: " + normalized.string());
     }
 
     if (seen_paths_.contains(normalized))
     {
-        return std::unexpected("Input path already enqueued: " +
-                               normalized.string());
+        return std::unexpected("Input path already enqueued: " + normalized.string());
     }
 
     auto config_result = apply_overrides(overrides);

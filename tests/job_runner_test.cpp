@@ -28,18 +28,18 @@ namespace stemsmith
 TEST(job_runner_test, resolves_future_on_completion)
 {
     std::vector<std::filesystem::path> writes;
-    auto writer = [&](const std::filesystem::path& path, const audio_buffer&) -> std::expected<void, std::string> {
+    auto writer = [&](const std::filesystem::path& path,
+                      const audio_buffer&) -> std::expected<void, std::string>
+    {
         writes.push_back(path);
         return {};
     };
-    auto loader = [](const std::filesystem::path&) -> std::expected<audio_buffer, std::string> {
-        return test::make_buffer(4);
-    };
+    auto loader = [](const std::filesystem::path&) -> std::expected<audio_buffer, std::string>
+    { return test::make_buffer(4); };
 
     model_session_pool pool(
-        [](model_profile_id id) -> std::expected<std::unique_ptr<model_session>, std::string> {
-            return test::make_stub_session(id);
-        });
+        [](model_profile_id id) -> std::expected<std::unique_ptr<model_session>, std::string>
+        { return test::make_stub_session(id); });
 
     const auto output_root = std::filesystem::temp_directory_path() / "stemsmith-job-output";
     std::filesystem::remove_all(output_root);
@@ -47,13 +47,17 @@ TEST(job_runner_test, resolves_future_on_completion)
     separation_engine engine(std::move(pool), output_root, loader, writer);
     std::vector<std::string> progress_messages;
     std::vector<job_event> events;
-    job_runner runner({}, std::move(engine), 1, [&](const job_descriptor& job, const job_event& event) {
-        events.push_back(event);
-        if (event.progress >= 0.0f)
-        {
-            progress_messages.push_back(job.input_path.string() + ":" + std::to_string(event.progress) + ":" + event.message);
-        }
-    });
+    job_runner runner({}, std::move(engine), 1,
+                      [&](const job_descriptor& job, const job_event& event)
+                      {
+                          events.push_back(event);
+                          if (event.progress >= 0.0f)
+                          {
+                              progress_messages.push_back(job.input_path.string() + ":" +
+                                                          std::to_string(event.progress) + ":" +
+                                                          event.message);
+                          }
+                      });
 
     const auto input_path_wav = write_temp_wav();
     auto submit_result = runner.submit(input_path_wav);
@@ -68,37 +72,35 @@ TEST(job_runner_test, resolves_future_on_completion)
     EXPECT_FALSE(error.has_value());
     EXPECT_EQ(writes.size(), 6U);
     EXPECT_FALSE(progress_messages.empty());
-    EXPECT_TRUE(std::any_of(events.begin(), events.end(), [](const job_event& evt) {
-        return evt.status == job_status::completed;
-    }));
+    EXPECT_TRUE(std::any_of(events.begin(), events.end(), [](const job_event& evt)
+                            { return evt.status == job_status::completed; }));
 }
 
 TEST(job_runner_test, emits_progress_events_in_order)
 {
-    auto loader = [](const std::filesystem::path&) -> std::expected<audio_buffer, std::string> {
-        return test::make_buffer(4);
-    };
+    auto loader = [](const std::filesystem::path&) -> std::expected<audio_buffer, std::string>
+    { return test::make_buffer(4); };
 
-    auto writer = [](const std::filesystem::path&, const audio_buffer&) -> std::expected<void, std::string> {
-        return {};
-    };
+    auto writer = [](const std::filesystem::path&,
+                     const audio_buffer&) -> std::expected<void, std::string> { return {}; };
 
     model_session_pool pool(
-        [](model_profile_id id) -> std::expected<std::unique_ptr<model_session>, std::string> {
-            return test::make_stub_session(id);
-        });
+        [](model_profile_id id) -> std::expected<std::unique_ptr<model_session>, std::string>
+        { return test::make_stub_session(id); });
 
     const auto output_root = std::filesystem::temp_directory_path() / "stemsmith-job-progress";
     std::filesystem::remove_all(output_root);
 
     separation_engine engine(std::move(pool), output_root, loader, writer);
     std::vector<float> progress_values;
-    job_runner runner({}, std::move(engine), 1, [&](const job_descriptor&, const job_event& event) {
-        if (event.progress >= 0.0f)
-        {
-            progress_values.push_back(event.progress);
-        }
-    });
+    job_runner runner({}, std::move(engine), 1,
+                      [&](const job_descriptor&, const job_event& event)
+                      {
+                          if (event.progress >= 0.0f)
+                          {
+                              progress_values.push_back(event.progress);
+                          }
+                      });
 
     const auto input_path = write_temp_wav();
     auto submit_result = runner.submit(input_path);
@@ -111,26 +113,22 @@ TEST(job_runner_test, emits_progress_events_in_order)
 
 TEST(job_runner_test, reports_status_flow)
 {
-    auto loader = [](const std::filesystem::path&) -> std::expected<audio_buffer, std::string> {
-        return test::make_buffer(4);
-    };
-    auto writer = [](const std::filesystem::path&, const audio_buffer&) -> std::expected<void, std::string> {
-        return {};
-    };
+    auto loader = [](const std::filesystem::path&) -> std::expected<audio_buffer, std::string>
+    { return test::make_buffer(4); };
+    auto writer = [](const std::filesystem::path&,
+                     const audio_buffer&) -> std::expected<void, std::string> { return {}; };
 
     model_session_pool pool(
-        [](model_profile_id id) -> std::expected<std::unique_ptr<model_session>, std::string> {
-            return test::make_stub_session(id);
-        });
+        [](model_profile_id id) -> std::expected<std::unique_ptr<model_session>, std::string>
+        { return test::make_stub_session(id); });
 
     const auto output_root = std::filesystem::temp_directory_path() / "stemsmith-job-status";
     std::filesystem::remove_all(output_root);
 
     separation_engine engine(std::move(pool), output_root, loader, writer);
     std::vector<job_event> events;
-    job_runner runner({}, std::move(engine), 1, [&](const job_descriptor&, const job_event& event) {
-        events.push_back(event);
-    });
+    job_runner runner({}, std::move(engine), 1, [&](const job_descriptor&, const job_event& event)
+                      { events.push_back(event); });
 
     const auto input_path = write_temp_wav();
     auto submit_result = runner.submit(input_path);
@@ -146,24 +144,23 @@ TEST(job_runner_test, reports_status_flow)
         }
     }
     ASSERT_GE(timeline.size(), 3U);
-    std::vector<job_status> expected{job_status::queued, job_status::running, job_status::completed};
+    std::vector<job_status> expected{job_status::queued, job_status::running,
+                                     job_status::completed};
     EXPECT_TRUE(std::equal(expected.begin(), expected.end(), timeline.begin()));
 }
 
 TEST(job_runner_test, propagates_engine_errors_to_future)
 {
-auto loader = [](const std::filesystem::path&) -> std::expected<audio_buffer, std::string> {
-        return test::make_buffer(4);
-    };
+    auto loader = [](const std::filesystem::path&) -> std::expected<audio_buffer, std::string>
+    { return test::make_buffer(4); };
 
-    auto writer = [](const std::filesystem::path&, const audio_buffer&) -> std::expected<void, std::string> {
-        return std::unexpected("writer failed");
-    };
+    auto writer = [](const std::filesystem::path&,
+                     const audio_buffer&) -> std::expected<void, std::string>
+    { return std::unexpected("writer failed"); };
 
     model_session_pool pool(
-        [](model_profile_id id) -> std::expected<std::unique_ptr<model_session>, std::string> {
-            return test::make_stub_session(id);
-        });
+        [](model_profile_id id) -> std::expected<std::unique_ptr<model_session>, std::string>
+        { return test::make_stub_session(id); });
 
     const auto output_root = std::filesystem::temp_directory_path() / "stemsmith-job-output";
     std::filesystem::remove_all(output_root);

@@ -22,23 +22,25 @@ job_runner::job_runner(job_config base_config,
                  make_engine(cache, std::move(output_root)),
                  worker_count,
                  std::move(event_callback))
-{}
+{
+}
 
 job_runner::job_runner(job_config base_config,
                        separation_engine engine,
                        std::size_t worker_count,
                        std::function<void(const job_descriptor&, const job_event&)> event_callback)
-    : catalog_(std::move(base_config))
-    , engine_(std::move(engine))
-    , pool_(worker_count,
-            [this](const job_descriptor& job, const std::atomic_bool& stop_flag) {
-                process_job(job, stop_flag);
-            },
-            [this](const job_event& event) { handle_event(event); })
-    , event_callback_(std::move(event_callback))
-{}
+    : catalog_(std::move(base_config)), engine_(std::move(engine)),
+      pool_(
+          worker_count,
+          [this](const job_descriptor& job, const std::atomic_bool& stop_flag)
+          { process_job(job, stop_flag); },
+          [this](const job_event& event) { handle_event(event); }),
+      event_callback_(std::move(event_callback))
+{
+}
 
-std::expected<std::future<job_result>, std::string> job_runner::submit(const std::filesystem::path& path, const job_overrides& overrides)
+std::expected<std::future<job_result>, std::string> job_runner::submit(
+    const std::filesystem::path& path, const job_overrides& overrides)
 {
     auto add_result = catalog_.add_file(path, overrides);
     if (!add_result)
@@ -95,7 +97,8 @@ void job_runner::process_job(const job_descriptor& job, const std::atomic_bool& 
     if (event_callback_)
     {
         job_descriptor job_copy = job;
-        cb = [this, job_copy](float pct, const std::string& message) {
+        cb = [this, job_copy](float pct, const std::string& message)
+        {
             if (const auto ctx = context_for(job_copy.input_path))
             {
                 job_event evt;
@@ -146,8 +149,7 @@ void job_runner::handle_event(const job_event& event)
             context = ctx_it->second;
         }
 
-        if (event.status == job_status::completed ||
-            event.status == job_status::failed ||
+        if (event.status == job_status::completed || event.status == job_status::failed ||
             event.status == job_status::cancelled)
         {
             paths_by_id_.erase(path_it);
@@ -168,7 +170,8 @@ void job_runner::handle_event(const job_event& event)
 
     switch (event.status)
     {
-    case job_status::completed: {
+    case job_status::completed:
+    {
         job_result result;
         result.input_path = input_path;
         result.status = job_status::completed;
@@ -177,7 +180,8 @@ void job_runner::handle_event(const job_event& event)
         break;
     }
     case job_status::failed:
-    case job_status::cancelled: {
+    case job_status::cancelled:
+    {
         job_result result;
         result.input_path = input_path;
         result.status = event.status;
@@ -197,7 +201,8 @@ void job_runner::handle_event(const job_event& event)
     }
 }
 
-std::shared_ptr<job_runner::job_context> job_runner::context_for(const std::filesystem::path& path) const
+std::shared_ptr<job_runner::job_context> job_runner::context_for(
+    const std::filesystem::path& path) const
 {
     std::lock_guard lock(mutex_);
     const auto it = contexts_.find(path);

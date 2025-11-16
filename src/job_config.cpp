@@ -52,9 +52,8 @@ std::string expand_env(const std::string& input)
         else
         {
             std::size_t j = i + 1;
-            while (j < input.size() &&
-                   (std::isalnum(static_cast<unsigned char>(input[j])) ||
-                    input[j] == '_' || input[j] == '-'))
+            while (j < input.size() && (std::isalnum(static_cast<unsigned char>(input[j])) ||
+                                        input[j] == '_' || input[j] == '-'))
             {
                 ++j;
             }
@@ -78,8 +77,7 @@ std::string expand_env(const std::string& input)
     return output;
 }
 
-std::expected<std::vector<std::string>, std::string>
-parse_stems(const nlohmann::json& doc)
+std::expected<std::vector<std::string>, std::string> parse_stems(const nlohmann::json& doc)
 {
     if (!doc.contains("stems"))
     {
@@ -105,12 +103,11 @@ parse_stems(const nlohmann::json& doc)
     return stems;
 }
 
-consteval stemsmith::model_profile make_profile(
-    stemsmith::model_profile_id id,
-    std::string_view key,
-    std::string_view label,
-    std::string_view filename,
-    std::initializer_list<std::string_view> stems)
+consteval stemsmith::model_profile make_profile(stemsmith::model_profile_id id,
+                                                std::string_view key,
+                                                std::string_view label,
+                                                std::string_view filename,
+                                                std::initializer_list<std::string_view> stems)
 {
     std::array<std::string_view, 6> buffer{};
     std::size_t count = 0;
@@ -131,32 +128,25 @@ constexpr std::array k_profiles{
                  "balanced-six-stem",
                  "Balanced 6-Stem",
                  "ggml-model-htdemucs-6s-f16.bin",
-                 {"vocals", "drums", "bass", "piano", "guitar",
-                  "other"})};
+                 {"vocals", "drums", "bass", "piano", "guitar", "other"})};
 
 const stemsmith::model_profile* find_profile(stemsmith::model_profile_id id)
 {
-    const auto it = std::ranges::find_if(k_profiles,
-                                   [id](const stemsmith::model_profile& profile) {
-                                       return profile.id == id;
-                                   });
+    const auto it = std::ranges::find_if(k_profiles, [id](const stemsmith::model_profile& profile)
+                                         { return profile.id == id; });
     return it == k_profiles.end() ? nullptr : &*it;
 }
 
 const stemsmith::model_profile* find_profile(std::string_view key)
 {
-    const auto it = std::ranges::find_if(k_profiles,
-                           [key](const stemsmith::model_profile& profile) {
-                               return profile.key == key;
-                           });
+    const auto it = std::ranges::find_if(k_profiles, [key](const stemsmith::model_profile& profile)
+                                         { return profile.key == key; });
     return it == k_profiles.end() ? nullptr : &*it;
 }
 
-bool stem_in_profile(std::string_view stem,
-                     const stemsmith::model_profile& profile)
+bool stem_in_profile(std::string_view stem, const stemsmith::model_profile& profile)
 {
-    return std::find(profile.stems.begin(),
-                     profile.stems.begin() + profile.stem_count, stem) !=
+    return std::find(profile.stems.begin(), profile.stems.begin() + profile.stem_count, stem) !=
            profile.stems.begin() + profile.stem_count;
 }
 } // namespace

@@ -25,22 +25,28 @@ struct separation_result
 
 class model_session
 {
-public:
+  public:
     using weight_resolver = std::function<std::expected<std::filesystem::path, std::string>()>;
-    using loader_function = std::function<std::expected<void, std::string>(demucscpp::demucs_model&, const std::filesystem::path&)>;
-    using inference_function = std::function<Eigen::Tensor3dXf(const demucscpp::demucs_model&, const Eigen::MatrixXf&, demucscpp::ProgressCallback)>;
+    using loader_function = std::function<std::expected<void, std::string>(
+        demucscpp::demucs_model&, const std::filesystem::path&)>;
+    using inference_function = std::function<Eigen::Tensor3dXf(
+        const demucscpp::demucs_model&, const Eigen::MatrixXf&, demucscpp::ProgressCallback)>;
 
     model_session(model_profile profile, model_cache& cache);
-    model_session(model_profile profile, weight_resolver resolver, loader_function loader, inference_function inference);
+    model_session(model_profile profile,
+                  weight_resolver resolver,
+                  loader_function loader,
+                  inference_function inference);
 
-    std::expected<separation_result, std::string>
-    separate(const audio_buffer& input,
-             std::span<const std::string_view> stems_to_extract = {},
-             demucscpp::ProgressCallback progress_cb = {});
+    std::expected<separation_result, std::string> separate(
+        const audio_buffer& input,
+        std::span<const std::string_view> stems_to_extract = {},
+        demucscpp::ProgressCallback progress_cb = {});
 
-private:
+  private:
     std::expected<demucscpp::demucs_model*, std::string> ensure_model_loaded();
-    std::expected<std::vector<std::size_t>, std::string> resolve_stem_indices(std::span<const std::string_view> stems) const;
+    std::expected<std::vector<std::size_t>, std::string> resolve_stem_indices(
+        std::span<const std::string_view> stems) const;
 
     model_profile profile_;
     weight_resolver resolver_;

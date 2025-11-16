@@ -36,8 +36,7 @@ TEST(job_config_test, loads_overrides_from_file)
 {
     setenv("STEMSMITH_CACHE", "/tmp/stemsmith", 1);
 
-    const auto result =
-        job_config::from_file(fixture_path("job_config/basic.json"));
+    const auto result = job_config::from_file(fixture_path("job_config/basic.json"));
     ASSERT_TRUE(result.has_value());
 
     const auto& config = result.value();
@@ -50,8 +49,7 @@ TEST(job_config_test, loads_overrides_from_file)
 
 TEST(job_config_test, resolves_all_stems_when_no_filter)
 {
-    const auto result =
-        job_config::from_file(fixture_path("job_config/four_stem.json"));
+    const auto result = job_config::from_file(fixture_path("job_config/four_stem.json"));
     ASSERT_TRUE(result.has_value());
 
     const auto& config = result.value();
@@ -64,24 +62,21 @@ TEST(job_config_test, resolves_all_stems_when_no_filter)
 
 TEST(job_config_test, rejects_invalid_stems_entry)
 {
-    const auto result =
-        job_config::from_file(fixture_path("job_config/invalid.json"));
+    const auto result = job_config::from_file(fixture_path("job_config/invalid.json"));
     ASSERT_FALSE(result.has_value());
     EXPECT_NE(result.error().find("stems entries must be strings"), std::string::npos);
 }
 
 TEST(job_config_test, rejects_unsupported_stem)
 {
-    const auto result =
-        job_config::from_file(fixture_path("job_config/unsupported.json"));
+    const auto result = job_config::from_file(fixture_path("job_config/unsupported.json"));
     ASSERT_FALSE(result.has_value());
     EXPECT_NE(result.error().find("Unsupported stem"), std::string::npos);
 }
 
 TEST(job_config_test, ignores_unknown_keys)
 {
-    const auto result =
-        job_config::from_file(fixture_path("job_config/unknown_key.json"));
+    const auto result = job_config::from_file(fixture_path("job_config/unknown_key.json"));
     ASSERT_TRUE(result.has_value());
 
     const auto& [profile, stems_filter, cache_root] = result.value();

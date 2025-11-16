@@ -24,7 +24,8 @@ TEST(stemsmith_service_test, creates_runner_with_cache)
     ASSERT_NE(svc, nullptr);
 
     EXPECT_TRUE(std::filesystem::exists(cache_root));
-    EXPECT_TRUE(std::filesystem::exists(output_root) || std::filesystem::create_directories(output_root));
+    EXPECT_TRUE(std::filesystem::exists(output_root) ||
+                std::filesystem::create_directories(output_root));
 
     const auto submit = svc->runner().submit(output_root / "missing.wav");
     EXPECT_FALSE(submit.has_value());

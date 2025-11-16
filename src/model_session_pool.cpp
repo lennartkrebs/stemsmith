@@ -7,25 +7,23 @@ namespace stemsmith
 {
 
 model_session_pool::model_session_pool(model_cache& cache)
-    : model_session_pool([&cache](model_profile_id profile_id) -> std::expected<session_ptr, std::string> {
-          const auto profile = lookup_profile(profile_id);
-          if (!profile)
+    : model_session_pool(
+          [&cache](model_profile_id profile_id) -> std::expected<session_ptr, std::string>
           {
-              return std::unexpected("Unknown model profile id");
-          }
-          return std::make_unique<model_session>(*profile, cache);
-      })
+              const auto profile = lookup_profile(profile_id);
+              if (!profile)
+              {
+                  return std::unexpected("Unknown model profile id");
+              }
+              return std::make_unique<model_session>(*profile, cache);
+          })
 {
 }
 
-model_session_pool::model_session_pool(session_factory factory)
-    : factory_(std::move(factory))
-{
-}
+model_session_pool::model_session_pool(session_factory factory) : factory_(std::move(factory)) {}
 
 model_session_pool::model_session_pool(model_session_pool&& other) noexcept
-    : buckets_(std::move(other.buckets_))
-    , factory_(std::move(other.factory_))
+    : buckets_(std::move(other.buckets_)), factory_(std::move(other.factory_))
 {
 }
 
@@ -40,20 +38,16 @@ model_session_pool& model_session_pool::operator=(model_session_pool&& other) no
     return *this;
 }
 
-model_session_pool::session_handle::~session_handle()
-{
-    release();
-}
+model_session_pool::session_handle::~session_handle() { release(); }
 
 model_session_pool::session_handle::session_handle(session_handle&& other) noexcept
-    : pool_(other.pool_)
-    , profile_(other.profile_)
-    , session_(std::move(other.session_))
+    : pool_(other.pool_), profile_(other.profile_), session_(std::move(other.session_))
 {
     other.pool_ = nullptr;
 }
 
-model_session_pool::session_handle& model_session_pool::session_handle::operator=(session_handle&& other) noexcept
+model_session_pool::session_handle& model_session_pool::session_handle::operator=(
+    session_handle&& other) noexcept
 {
     if (this != &other)
     {
@@ -66,11 +60,12 @@ model_session_pool::session_handle& model_session_pool::session_handle::operator
     return *this;
 }
 
-model_session_pool::session_handle::session_handle(model_session_pool* pool, model_profile_id profile, session_ptr session)
-    : pool_(pool)
-    , profile_(profile)
-    , session_(std::move(session))
-{}
+model_session_pool::session_handle::session_handle(model_session_pool* pool,
+                                                   model_profile_id profile,
+                                                   session_ptr session)
+    : pool_(pool), profile_(profile), session_(std::move(session))
+{
+}
 
 void model_session_pool::session_handle::release()
 {
@@ -81,22 +76,17 @@ void model_session_pool::session_handle::release()
     pool_ = nullptr;
 }
 
-model_session& model_session_pool::session_handle::operator*() const noexcept
-{
-    return *session_;
-}
+model_session& model_session_pool::session_handle::operator*() const noexcept { return *session_; }
 
 model_session* model_session_pool::session_handle::operator->() const noexcept
 {
     return session_.get();
 }
 
-model_session* model_session_pool::session_handle::get() const noexcept
-{
-    return session_.get();
-}
+model_session* model_session_pool::session_handle::get() const noexcept { return session_.get(); }
 
-std::expected<model_session_pool::session_handle, std::string> model_session_pool::acquire(model_profile_id profile)
+std::expected<model_session_pool::session_handle, std::string> model_session_pool::acquire(
+    model_profile_id profile)
 {
     if (!factory_)
     {

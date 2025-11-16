@@ -26,7 +26,7 @@ struct job_result
 
 class job_runner
 {
-public:
+  public:
     job_runner(job_config base_config,
                model_cache& cache,
                std::filesystem::path output_root,
@@ -38,9 +38,10 @@ public:
                std::size_t worker_count = std::thread::hardware_concurrency(),
                std::function<void(const job_descriptor&, const job_event&)> event_callback = {});
 
-    std::expected<std::future<job_result>, std::string> submit(const std::filesystem::path& path, const job_overrides& overrides = {});
+    std::expected<std::future<job_result>, std::string> submit(const std::filesystem::path& path,
+                                                               const job_overrides& overrides = {});
 
-private:
+  private:
     struct job_context
     {
         std::promise<job_result> promise;

@@ -23,7 +23,9 @@ inline audio_buffer make_buffer(std::size_t frames)
     return buffer;
 }
 
-inline std::unique_ptr<model_session> make_stub_session(model_profile_id profile_id, int frame_count = 4, float fill_value = 0.0f)
+inline std::unique_ptr<model_session> make_stub_session(model_profile_id profile_id,
+                                                        int frame_count = 4,
+                                                        float fill_value = 0.0f)
 {
     const auto profile_opt = lookup_profile(profile_id);
     if (!profile_opt)
@@ -31,17 +33,16 @@ inline std::unique_ptr<model_session> make_stub_session(model_profile_id profile
         throw std::runtime_error("Unknown profile id");
     }
 
-    auto resolver = []() -> std::expected<std::filesystem::path, std::string> {
-        return std::filesystem::path{"stub-weights.bin"};
-    };
-    auto loader = [](demucscpp::demucs_model&, const std::filesystem::path&) {
-        return std::expected<void, std::string>{};
-    };
+    auto resolver = []() -> std::expected<std::filesystem::path, std::string>
+    { return std::filesystem::path{"stub-weights.bin"}; };
+    auto loader = [](demucscpp::demucs_model&, const std::filesystem::path&)
+    { return std::expected<void, std::string>{}; };
 
     const auto stem_count = static_cast<int>(profile_opt->stem_count);
     auto inference = [stem_count, frame_count, fill_value](const demucscpp::demucs_model&,
                                                            const Eigen::MatrixXf&,
-                                                           demucscpp::ProgressCallback cb) {
+                                                           demucscpp::ProgressCallback cb)
+    {
         if (cb)
         {
             cb(0.0f, "stub");
@@ -54,8 +55,8 @@ inline std::unique_ptr<model_session> make_stub_session(model_profile_id profile
         return tensor;
     };
 
-    return std::make_unique<model_session>(
-        *profile_opt, std::move(resolver), std::move(loader), std::move(inference));
+    return std::make_unique<model_session>(*profile_opt, std::move(resolver), std::move(loader),
+                                           std::move(inference));
 }
 
 } // namespace stemsmith::test

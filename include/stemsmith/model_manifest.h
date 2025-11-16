@@ -25,7 +25,7 @@ struct model_manifest_entry
  */
 class model_manifest
 {
-public:
+  public:
     model_manifest() = default;
     explicit model_manifest(std::vector<model_manifest_entry> entries);
 
@@ -33,7 +33,8 @@ public:
     static std::expected<model_manifest, std::string> from_file(const std::filesystem::path& path);
 
     [[nodiscard]] const model_manifest_entry* find(model_profile_id profile) const;
-private:
+
+  private:
     std::map<model_profile_id, model_manifest_entry> entries_;
 };
 } // namespace stemsmith

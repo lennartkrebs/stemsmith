@@ -15,12 +15,14 @@ namespace
 {
 using stemsmith::model_manifest_entry;
 
-std::filesystem::path model_path(const std::filesystem::path& root, const model_manifest_entry& entry)
+std::filesystem::path model_path(const std::filesystem::path& root,
+                                 const model_manifest_entry& entry)
 {
     return root / entry.profile_key / entry.filename;
 }
 
-std::expected<bool, std::string> file_ready(const std::filesystem::path& path, const model_manifest_entry& entry)
+std::expected<bool, std::string> file_ready(const std::filesystem::path& path,
+                                            const model_manifest_entry& entry)
 {
     std::error_code ec;
     if (!std::filesystem::exists(path, ec))
@@ -61,7 +63,8 @@ std::expected<bool, std::string> file_ready(const std::filesystem::path& path, c
 
 namespace stemsmith
 {
-std::expected<model_cache, std::string> model_cache::create(std::filesystem::path cache_root, std::shared_ptr<weight_fetcher> fetcher)
+std::expected<model_cache, std::string> model_cache::create(std::filesystem::path cache_root,
+                                                            std::shared_ptr<weight_fetcher> fetcher)
 {
     if (!fetcher)
     {
@@ -76,11 +79,13 @@ std::expected<model_cache, std::string> model_cache::create(std::filesystem::pat
     return model_cache{std::move(cache_root), std::move(fetcher), std::move(manifest.value())};
 }
 
-model_cache::model_cache(std::filesystem::path cache_root, std::shared_ptr<weight_fetcher> fetcher, model_manifest manifest)
-    : cache_root_(std::move(cache_root))
-    , fetcher_(std::move(fetcher))
-    , manifest_(std::move(manifest))
-{}
+model_cache::model_cache(std::filesystem::path cache_root,
+                         std::shared_ptr<weight_fetcher> fetcher,
+                         model_manifest manifest)
+    : cache_root_(std::move(cache_root)), fetcher_(std::move(fetcher)),
+      manifest_(std::move(manifest))
+{
+}
 
 std::expected<model_handle, std::string> model_cache::ensure_ready(model_profile_id profile)
 {
@@ -138,7 +143,8 @@ model_cache::profile_state& model_cache::state_for(model_profile_id profile)
     return *it->second;
 }
 
-std::expected<model_handle, std::string> model_cache::hydrate(model_profile_id profile, const model_manifest_entry& entry)
+std::expected<model_handle, std::string> model_cache::hydrate(model_profile_id profile,
+                                                              const model_manifest_entry& entry)
 {
     const auto path = model_path(cache_root_, entry);
 
@@ -169,7 +175,8 @@ std::expected<model_handle, std::string> model_cache::hydrate(model_profile_id p
     return download_and_stage(profile, entry);
 }
 
-std::expected<model_handle, std::string> model_cache::download_and_stage(model_profile_id profile, const model_manifest_entry& entry) const
+std::expected<model_handle, std::string> model_cache::download_and_stage(
+    model_profile_id profile, const model_manifest_entry& entry) const
 {
     const auto target_path = model_path(cache_root_, entry);
     std::filesystem::path staging = target_path;
@@ -235,7 +242,8 @@ std::expected<model_handle, std::string> model_cache::download_and_stage(model_p
     return model_handle{profile, target_path, entry.sha256, entry.size_bytes, false};
 }
 
-std::expected<bool, std::string> model_cache::verify_checksum(const std::filesystem::path& path, const model_manifest_entry& entry)
+std::expected<bool, std::string> model_cache::verify_checksum(const std::filesystem::path& path,
+                                                              const model_manifest_entry& entry)
 {
     std::ifstream input(path, std::ios::binary);
     if (!input)

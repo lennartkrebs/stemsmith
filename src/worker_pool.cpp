@@ -33,11 +33,8 @@ struct worker_pool::impl
     bool shutting_down{false};
     std::atomic_bool stop_requested{false};
 
-    explicit impl(std::size_t thread_count,
-                  job_processor processor_fn,
-                  job_callback callback_fn)
-        : processor(std::move(processor_fn)),
-          callback(std::move(callback_fn))
+    explicit impl(std::size_t thread_count, job_processor processor_fn, job_callback callback_fn)
+        : processor(std::move(processor_fn)), callback(std::move(callback_fn))
     {
         if (!processor)
         {
@@ -56,15 +53,9 @@ struct worker_pool::impl
         }
     }
 
-    ~impl()
-    {
-        shutdown();
-    }
+    ~impl() { shutdown(); }
 
-    [[nodiscard]] bool is_shutdown() const noexcept
-    {
-        return shutting_down;
-    }
+    [[nodiscard]] bool is_shutdown() const noexcept { return shutting_down; }
 
     std::size_t enqueue(job_descriptor job)
     {
@@ -86,7 +77,8 @@ struct worker_pool::impl
     void shutdown()
     {
         // Cancel running jobs
-        if (stop_requested.exchange(true)) return;
+        if (stop_requested.exchange(true))
+            return;
 
         std::vector<queued_job> cancelled;
         {
@@ -190,9 +182,7 @@ struct worker_pool::impl
     }
 };
 
-worker_pool::worker_pool(std::size_t thread_count,
-                         job_processor processor,
-                         job_callback callback)
+worker_pool::worker_pool(std::size_t thread_count, job_processor processor, job_callback callback)
     : impl_(std::make_unique<impl>(thread_count, std::move(processor), std::move(callback)))
 {
 }
@@ -204,13 +194,7 @@ std::size_t worker_pool::enqueue(job_descriptor job) const
     return impl_->enqueue(std::move(job));
 }
 
-void worker_pool::shutdown() const
-{
-    impl_->shutdown();
-}
+void worker_pool::shutdown() const { impl_->shutdown(); }
 
-bool worker_pool::is_shutdown() const noexcept
-{
-    return impl_->is_shutdown();
-}
+bool worker_pool::is_shutdown() const noexcept { return impl_->is_shutdown(); }
 } // namespace stemsmith

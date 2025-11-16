@@ -10,12 +10,12 @@ namespace stemsmith::test
 
 class fake_fetcher final : public weight_fetcher
 {
-public:
-    explicit fake_fetcher(std::string_view payload)
-        : payload_(payload)
-    {}
+  public:
+    explicit fake_fetcher(std::string_view payload) : payload_(payload) {}
 
-    std::expected<void, std::string> fetch_weights(std::string_view /*url*/, const std::filesystem::path& destination, progress_callback progress = {}) override
+    std::expected<void, std::string> fetch_weights(std::string_view /*url*/,
+                                                   const std::filesystem::path& destination,
+                                                   progress_callback progress = {}) override
     {
         ++call_count;
         std::ofstream out(destination, std::ios::binary);
@@ -28,9 +28,10 @@ public:
         return {};
     }
 
-    size_t call_count {0};
-private:
+    size_t call_count{0};
+
+  private:
     std::string payload_{};
 };
 
-} // namespace stemsmith
+} // namespace stemsmith::test

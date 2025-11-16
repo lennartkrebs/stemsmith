@@ -11,7 +11,7 @@ namespace
 {
 class fake_filesystem
 {
-public:
+  public:
     fake_filesystem() = default;
 
     fake_filesystem(const std::initializer_list<std::filesystem::path> entries)
@@ -27,7 +27,7 @@ public:
         return files_.contains(path.lexically_normal());
     }
 
-private:
+  private:
     std::unordered_set<std::filesystem::path> files_;
 };
 } // namespace
@@ -37,9 +37,7 @@ namespace stemsmith
 TEST(job_catalog_test, enqueues_files_with_base_config)
 {
     const fake_filesystem fs{"/music/a.wav", "/music/b.wav"};
-    job_catalog builder(
-        {},
-        [&fs](const std::filesystem::path& path) { return fs.exists(path); });
+    job_catalog builder({}, [&fs](const std::filesystem::path& path) { return fs.exists(path); });
 
     ASSERT_TRUE(builder.add_file("/music/a.wav").has_value());
     ASSERT_TRUE(builder.add_file("/music/b.wav").has_value());
@@ -55,9 +53,7 @@ TEST(job_catalog_test, enqueues_files_with_base_config)
 TEST(job_catalog_test, reject_duplicate_files)
 {
     const fake_filesystem fs{"/music/a.wav"};
-    job_catalog builder(
-        {},
-        [&fs](const std::filesystem::path& path) { return fs.exists(path); });
+    job_catalog builder({}, [&fs](const std::filesystem::path& path) { return fs.exists(path); });
 
     ASSERT_TRUE(builder.add_file("/music/a.wav").has_value());
     const auto dup = builder.add_file("/music/a.wav");
@@ -68,9 +64,7 @@ TEST(job_catalog_test, reject_duplicate_files)
 TEST(job_catalog_test, applies_overrides)
 {
     const fake_filesystem fs{"/music/a.wav"};
-    job_catalog builder(
-        {},
-        [&fs](const std::filesystem::path& path) { return fs.exists(path); });
+    job_catalog builder({}, [&fs](const std::filesystem::path& path) { return fs.exists(path); });
 
     job_overrides overrides;
     overrides.profile = model_profile_id::balanced_four_stem;
@@ -85,13 +79,10 @@ TEST(job_catalog_test, applies_overrides)
 TEST(job_catalog_test, reject_unsupported_stem_in_overrides)
 {
     const fake_filesystem fs{"/music/a.wav"};
-    job_catalog builder(
-        {},
-        [&fs](const std::filesystem::path& path) { return fs.exists(path); });
+    job_catalog builder({}, [&fs](const std::filesystem::path& path) { return fs.exists(path); });
 
     job_overrides overrides;
-    overrides.stems_filter =
-        std::vector<std::string>{"vocals", "synths"}; // synths not in preset
+    overrides.stems_filter = std::vector<std::string>{"vocals", "synths"}; // synths not in preset
 
     const auto result = builder.add_file("/music/a.wav", overrides);
     ASSERT_FALSE(result.has_value());

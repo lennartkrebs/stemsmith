@@ -23,10 +23,10 @@ size_t write_callback(char* ptr, size_t size, size_t nmemb, void* userdata)
 }
 
 int curl_progress_callback(void* clientp,
-                      curl_off_t dltotal,
-                      curl_off_t dlnow,
-                      curl_off_t /*ultotal*/,
-                      curl_off_t /*ulnow*/)
+                           curl_off_t dltotal,
+                           curl_off_t dlnow,
+                           curl_off_t /*ultotal*/,
+                           curl_off_t /*ulnow*/)
 {
     auto* payload = static_cast<progress_payload*>(clientp);
     if (payload && payload->callback)
@@ -35,23 +35,17 @@ int curl_progress_callback(void* clientp,
     }
     return 0;
 }
-}
+} // namespace
 
-http_weight_fetcher::http_weight_fetcher(std::chrono::seconds timeout)
-    : timeout_(timeout)
+http_weight_fetcher::http_weight_fetcher(std::chrono::seconds timeout) : timeout_(timeout)
 {
     curl_global_init(CURL_GLOBAL_DEFAULT);
 }
 
-http_weight_fetcher::~http_weight_fetcher()
-{
-    curl_global_cleanup();
-}
+http_weight_fetcher::~http_weight_fetcher() { curl_global_cleanup(); }
 
-std::expected<void, std::string>
-http_weight_fetcher::fetch_weights(std::string_view url,
-                                   const std::filesystem::path& destination,
-                                   progress_callback progress)
+std::expected<void, std::string> http_weight_fetcher::fetch_weights(
+    std::string_view url, const std::filesystem::path& destination, progress_callback progress)
 {
     std::error_code ec;
     std::filesystem::create_directories(destination.parent_path(), ec);

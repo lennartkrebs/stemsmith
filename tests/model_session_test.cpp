@@ -44,22 +44,18 @@ Eigen::Tensor3dXf make_tensor(std::size_t targets, std::size_t frames)
 }
 
 stemsmith::model_session make_session(const stemsmith::model_profile& profile,
-                           Eigen::Tensor3dXf outputs)
+                                      Eigen::Tensor3dXf outputs)
 {
-    auto resolver = []() -> std::expected<std::filesystem::path, std::string> {
-        return std::filesystem::path{"unused.bin"};
-    };
-    auto loader = [](demucscpp::demucs_model&, const std::filesystem::path&) {
-        return std::expected<void, std::string>{};
-    };
+    auto resolver = []() -> std::expected<std::filesystem::path, std::string>
+    { return std::filesystem::path{"unused.bin"}; };
+    auto loader = [](demucscpp::demucs_model&, const std::filesystem::path&)
+    { return std::expected<void, std::string>{}; };
     auto inference =
-        [tensor = std::move(outputs)](const demucscpp::demucs_model&,
-                                      const Eigen::MatrixXf&,
-                                      demucscpp::ProgressCallback) mutable {
-            return tensor;
-        };
+        [tensor = std::move(outputs)](const demucscpp::demucs_model&, const Eigen::MatrixXf&,
+                                      demucscpp::ProgressCallback) mutable { return tensor; };
 
-    return stemsmith::model_session(profile, std::move(resolver), std::move(loader), std::move(inference));
+    return stemsmith::model_session(profile, std::move(resolver), std::move(loader),
+                                    std::move(inference));
 }
 } // namespace
 

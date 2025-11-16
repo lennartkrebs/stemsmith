@@ -13,7 +13,9 @@
 
 namespace
 {
-std::string expand_template(std::string_view tpl, std::string_view placeholder, std::string_view value)
+std::string expand_template(std::string_view tpl,
+                            std::string_view placeholder,
+                            std::string_view value)
 {
     std::string result(tpl);
     if (const auto pos = result.find(placeholder); pos != std::string::npos)
@@ -34,17 +36,18 @@ model_manifest::model_manifest(std::vector<model_manifest_entry> entries)
     }
 }
 
-std::expected<model_manifest, std::string>
-model_manifest::load_default()
+std::expected<model_manifest, std::string> model_manifest::load_default()
 {
 #ifndef STEMSMITH_DATA_DIR
 #error "STEMSMITH_DATA_DIR is not defined"
 #endif
-    const std::filesystem::path manifest_path = std::filesystem::path{STEMSMITH_DATA_DIR} / "model_manifest.json";
+    const std::filesystem::path manifest_path =
+        std::filesystem::path{STEMSMITH_DATA_DIR} / "model_manifest.json";
     return from_file(manifest_path);
 }
 
-std::expected<model_manifest, std::string> model_manifest::from_file(const std::filesystem::path& path)
+std::expected<model_manifest, std::string> model_manifest::from_file(
+    const std::filesystem::path& path)
 {
     const auto doc = utils::load_json_file(path);
     if (!doc)
