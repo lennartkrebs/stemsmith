@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.16)
 set(PROJECT_NAME stemsmith)
 project(stemsmith LANGUAGES CXX)
 
+find_package(CURL REQUIRED)
+
 if (CMAKE_VERSION VERSION_GREATER_EQUAL "4.0")
     set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 endif ()
@@ -50,6 +52,7 @@ target_link_libraries(${PROJECT_NAME}
         demucs.cpp.lib
         libnyquist
         samplerate
+        CURL::libcurl
 )
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -115,3 +118,16 @@ target_compile_definitions(${PROJECT_NAME}_test
 )
 
 add_test(NAME stemsmith-test COMMAND ${PROJECT_NAME}_test)
+
+option(STEMSMITH_BUILD_EXAMPLES "Build Stemsmith examples" ON)
+if (STEMSMITH_BUILD_EXAMPLES)
+    add_executable(stemsmith_progress_example examples/progress_example.cpp)
+    target_link_libraries(stemsmith_progress_example PRIVATE ${PROJECT_NAME})
+    target_include_directories(stemsmith_progress_example PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/examples)
+    target_compile_definitions(stemsmith_progress_example PRIVATE STEMSMITH_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_compile_options(stemsmith_progress_example PRIVATE -Wno-deprecated-declarations)
+    endif ()
+endif ()
