@@ -118,7 +118,7 @@ struct worker_pool::impl
 
         for (auto& [id, job] : cancelled)
         {
-            emit_event(id, job_status::cancelled, "Worker pool shutting down");
+            emit_event(id, job_status::cancelled, -1.0f, "Worker pool shutting down");
         }
     }
 
@@ -162,7 +162,7 @@ struct worker_pool::impl
 
             if (error.has_value())
             {
-                emit_event(next.id, job_status::failed, std::move(error));
+                emit_event(next.id, job_status::failed, -1.0f, {}, std::move(error));
             }
             else
             {
@@ -173,11 +173,19 @@ struct worker_pool::impl
 
     void emit_event(std::size_t id,
                     job_status status,
+                    float progress = -1.0f,
+                    std::string message = {},
                     std::optional<std::string> error = {}) const
     {
         if (callback)
         {
-            callback(job_event{id, status, std::move(error)});
+            job_event event;
+            event.id = id;
+            event.status = status;
+            event.progress = progress;
+            event.message = std::move(message);
+            event.error = std::move(error);
+            callback(event);
         }
     }
 };

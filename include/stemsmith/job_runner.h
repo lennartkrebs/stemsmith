@@ -31,13 +31,11 @@ public:
                model_cache& cache,
                std::filesystem::path output_root,
                std::size_t worker_count = std::thread::hardware_concurrency(),
-               std::function<void(const job_descriptor&, float, const std::string&)> progress = {},
-               std::function<void(const job_event&, const job_descriptor&)> status_callback = {});
+               std::function<void(const job_descriptor&, const job_event&)> event_callback = {});
     job_runner(job_config base_config,
                separation_engine engine,
                std::size_t worker_count = std::thread::hardware_concurrency(),
-               std::function<void(const job_descriptor&, float, const std::string&)> progress = {},
-               std::function<void(const job_event&, const job_descriptor&)> status_callback = {});
+               std::function<void(const job_descriptor&, const job_event&)> event_callback = {});
 
     std::expected<std::future<job_result>, std::string> submit(const std::filesystem::path& path, const job_overrides& overrides = {});
 
@@ -58,8 +56,7 @@ private:
     job_catalog catalog_;
     separation_engine engine_;
     worker_pool pool_;
-    std::function<void(const job_descriptor&, float, const std::string&)> progress_;
-    std::function<void(const job_event&, const job_descriptor&)> status_callback_;
+    std::function<void(const job_descriptor&, const job_event&)> event_callback_;
 
     mutable std::mutex mutex_;
     std::unordered_map<std::filesystem::path, std::shared_ptr<job_context>> contexts_;

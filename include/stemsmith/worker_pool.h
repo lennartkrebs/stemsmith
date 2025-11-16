@@ -25,6 +25,8 @@ struct job_event
 {
     std::size_t id{};
     job_status status{job_status::queued};
+    float progress{-1.0f};
+    std::string message{};
     std::optional<std::string> error{};
 };
 

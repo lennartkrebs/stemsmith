@@ -13,11 +13,21 @@ separation_engine make_engine(model_cache& cache, std::filesystem::path output_r
 }
 } // namespace
 
-job_runner::job_runner(job_config base_config, model_cache& cache, std::filesystem::path output_root, std::size_t worker_count, std::function<void(const job_descriptor&, float, const std::string&)> progress, std::function<void(const job_event&, const job_descriptor&)> status_callback)
-    : job_runner(std::move(base_config), make_engine(cache, std::move(output_root)), worker_count, std::move(progress), std::move(status_callback))
+job_runner::job_runner(job_config base_config,
+                       model_cache& cache,
+                       std::filesystem::path output_root,
+                       std::size_t worker_count,
+                       std::function<void(const job_descriptor&, const job_event&)> event_callback)
+    : job_runner(std::move(base_config),
+                 make_engine(cache, std::move(output_root)),
+                 worker_count,
+                 std::move(event_callback))
 {}
 
-job_runner::job_runner(job_config base_config, separation_engine engine, std::size_t worker_count, std::function<void(const job_descriptor&, float, const std::string&)> progress, std::function<void(const job_event&, const job_descriptor&)> status_callback)
+job_runner::job_runner(job_config base_config,
+                       separation_engine engine,
+                       std::size_t worker_count,
+                       std::function<void(const job_descriptor&, const job_event&)> event_callback)
     : catalog_(std::move(base_config))
     , engine_(std::move(engine))
     , pool_(worker_count,
@@ -25,8 +35,7 @@ job_runner::job_runner(job_config base_config, separation_engine engine, std::si
                 process_job(job, stop_flag);
             },
             [this](const job_event& event) { handle_event(event); })
-    , progress_(std::move(progress))
-    , status_callback_(std::move(status_callback))
+    , event_callback_(std::move(event_callback))
 {}
 
 std::expected<std::future<job_result>, std::string> job_runner::submit(const std::filesystem::path& path, const job_overrides& overrides)
@@ -83,11 +92,19 @@ void job_runner::process_job(const job_descriptor& job, const std::atomic_bool& 
     }
 
     demucscpp::ProgressCallback cb;
-    if (progress_)
+    if (event_callback_)
     {
         job_descriptor job_copy = job;
         cb = [this, job_copy](float pct, const std::string& message) {
-            progress_(job_copy, pct, message);
+            if (const auto ctx = context_for(job_copy.input_path))
+            {
+                job_event evt;
+                evt.id = ctx->job_id;
+                evt.status = job_status::running;
+                evt.progress = pct;
+                evt.message = message;
+                event_callback_(job_copy, evt);
+            }
         };
     }
 
@@ -139,14 +156,14 @@ void job_runner::handle_event(const job_event& event)
         }
     }
 
-    if (context && status_callback_)
-    {
-        status_callback_(event, context->job);
-    }
-
     if (!context)
     {
         return;
+    }
+
+    if (context && event_callback_)
+    {
+        event_callback_(context->job, event);
     }
 
     switch (event.status)
