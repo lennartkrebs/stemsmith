@@ -160,6 +160,7 @@ std::expected<model_handle, std::string> model_cache::hydrate(model_profile_id p
     {
         return std::unexpected(ready.error());
     }
+
     if (ready.value())
     {
         return model_handle{profile, path, entry.sha256, entry.size_bytes, true};

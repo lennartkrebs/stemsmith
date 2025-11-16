@@ -32,6 +32,7 @@ public:
                std::filesystem::path output_root,
                std::size_t worker_count = std::thread::hardware_concurrency(),
                std::function<void(const job_descriptor&, const job_event&)> event_callback = {});
+
     job_runner(job_config base_config,
                separation_engine engine,
                std::size_t worker_count = std::thread::hardware_concurrency(),

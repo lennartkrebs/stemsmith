@@ -44,7 +44,10 @@ inline std::unique_ptr<model_session> make_stub_session(model_profile_id profile
                                                            demucscpp::ProgressCallback cb) {
         if (cb)
         {
+            cb(0.0f, "stub");
+            cb(0.25f, "stub");
             cb(0.5f, "stub");
+            cb(1.0f, "stub");
         }
         Eigen::Tensor3dXf tensor(stem_count, 2, frame_count);
         tensor.setConstant(fill_value);

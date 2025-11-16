@@ -92,11 +92,11 @@ TEST(job_runner_test, emits_progress_events_in_order)
     std::filesystem::remove_all(output_root);
 
     separation_engine engine(std::move(pool), output_root, loader, writer);
-    std::vector<std::string> progress_events;
-    job_runner runner({}, std::move(engine), 1, [&](const job_descriptor& job, const job_event& event) {
+    std::vector<float> progress_values;
+    job_runner runner({}, std::move(engine), 1, [&](const job_descriptor&, const job_event& event) {
         if (event.progress >= 0.0f)
         {
-            progress_events.push_back(job.input_path.filename().string() + ":" + std::to_string(event.progress) + ":" + event.message);
+            progress_values.push_back(event.progress);
         }
     });
 
@@ -104,12 +104,9 @@ TEST(job_runner_test, emits_progress_events_in_order)
     auto submit_result = runner.submit(input_path);
     ASSERT_TRUE(submit_result.has_value());
 
-    submit_result->get(); // wait for completion
-    ASSERT_FALSE(progress_events.empty());
-    EXPECT_TRUE(std::ranges::any_of(progress_events,
-                            [](const std::string& evt) {
-                                return evt.find("stub") != std::string::npos;
-                            }));
+    submit_result->get();
+    const std::vector<float> expected{0.0f, 0.25f, 0.5f, 1.0f};
+    ASSERT_EQ(progress_values, expected);
 }
 
 TEST(job_runner_test, reports_status_flow)
@@ -151,42 +148,6 @@ TEST(job_runner_test, reports_status_flow)
     ASSERT_GE(timeline.size(), 3U);
     std::vector<job_status> expected{job_status::queued, job_status::running, job_status::completed};
     EXPECT_TRUE(std::equal(expected.begin(), expected.end(), timeline.begin()));
-}
-
-TEST(job_runner_test, forwards_progress_updates)
-{
-    auto loader = [](const std::filesystem::path&) -> std::expected<audio_buffer, std::string> {
-        return test::make_buffer(4);
-    };
-    auto writer = [](const std::filesystem::path&, const audio_buffer&) -> std::expected<void, std::string> {
-        return {};
-    };
-
-    model_session_pool pool(
-        [](model_profile_id id) -> std::expected<std::unique_ptr<model_session>, std::string> {
-            return test::make_stub_session(id, 4, 0.0f);
-        });
-
-    const auto output_root = std::filesystem::temp_directory_path() / "stemsmith-job-progress-flow";
-    std::filesystem::remove_all(output_root);
-
-    separation_engine engine(std::move(pool), output_root, loader, writer);
-    std::vector<float> progress_values;
-    job_runner runner({}, std::move(engine), 1, [&](const job_descriptor&, const job_event& event) {
-        if (event.progress >= 0.0f)
-        {
-            progress_values.push_back(event.progress);
-        }
-    });
-
-    const auto input_path = write_temp_wav();
-    auto submit_result = runner.submit(input_path);
-    ASSERT_TRUE(submit_result.has_value());
-    submit_result->get();
-
-    ASSERT_FALSE(progress_values.empty());
-    EXPECT_TRUE(progress_values.front() >= 0.0f);
-    EXPECT_TRUE(progress_values.back() <= 1.0f);
 }
 
 TEST(job_runner_test, propagates_engine_errors_to_future)
