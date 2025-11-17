@@ -29,6 +29,27 @@ FetchContent_MakeAvailable(libsamplerate)
 
 add_subdirectory(external/demucs.cpp)
 
+# Silence noise from the vendored demucs/libnyquist sources.
+if (TARGET demucs.cpp.lib)
+    target_compile_options(demucs.cpp.lib PRIVATE -w)
+endif()
+
+if (TARGET Eigen3)
+    target_compile_options(Eigen3 PRIVATE -w)
+endif()
+
+if (TARGET libnyquist)
+    target_compile_options(libnyquist PRIVATE -w)
+endif()
+
+if (TARGET gtest)
+    target_compile_options(gtest PRIVATE -Wno-nan-infinity-disabled)
+endif()
+
+if (TARGET gtest_main)
+    target_compile_options(gtest_main PRIVATE -Wno-nan-infinity-disabled)
+endif()
+
 file(GLOB SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 add_library(${PROJECT_NAME} ${SOURCES})
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
@@ -40,6 +61,11 @@ target_include_directories(${PROJECT_NAME}
         ${asio_SOURCE_DIR}/asio/include
         ${CMAKE_CURRENT_SOURCE_DIR}/external/demucs.cpp/src
         ${CMAKE_CURRENT_SOURCE_DIR}/external/demucs.cpp/vendor/libnyquist/include
+)
+
+target_include_directories(${PROJECT_NAME}
+        SYSTEM PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/external/demucs.cpp/vendor/eigen
 )
 
 target_compile_definitions(${PROJECT_NAME}
@@ -54,10 +80,6 @@ target_link_libraries(${PROJECT_NAME}
         samplerate
         CURL::libcurl
 )
-
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wno-deprecated-declarations)
-endif()
 
 option(ENABLE_OPENMP "Enable OpenMP for faster inference" ON)
 if (ENABLE_OPENMP)
@@ -102,10 +124,6 @@ target_link_libraries(${PROJECT_NAME}_test
         GTest::gtest
 )
 
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    target_compile_options(${PROJECT_NAME}_test PRIVATE -Wno-deprecated-declarations)
-endif()
-
 target_include_directories(${PROJECT_NAME}_test
         PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -127,7 +145,4 @@ if (STEMSMITH_BUILD_EXAMPLES)
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/examples)
     target_compile_definitions(stemsmith_progress_example PRIVATE STEMSMITH_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
-    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        target_compile_options(stemsmith_progress_example PRIVATE -Wno-deprecated-declarations)
-    endif ()
 endif ()
