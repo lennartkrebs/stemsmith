@@ -13,7 +13,7 @@ struct weight_fetcher
     virtual ~weight_fetcher() = default;
     virtual std::expected<void, std::string> fetch_weights(std::string_view url,
                                                            const std::filesystem::path& destination,
-                                                           progress_callback progress = {}) = 0;
+                                                           progress_callback progress) = 0;
 };
 
 } // namespace stemsmith

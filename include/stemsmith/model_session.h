@@ -43,7 +43,7 @@ public:
 
 private:
     std::expected<demucscpp::demucs_model*, std::string> ensure_model_loaded();
-    std::expected<std::vector<std::size_t>, std::string> resolve_stem_indices(
+    [[nodiscard]] std::expected<std::vector<std::size_t>, std::string> resolve_stem_indices(
         std::span<const std::string_view> stems) const;
 
     model_profile profile_;

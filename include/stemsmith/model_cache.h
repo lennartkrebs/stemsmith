@@ -46,8 +46,8 @@ public:
     }
 
     std::expected<model_handle, std::string> ensure_ready(model_profile_id profile);
-    std::expected<void, std::string> purge(model_profile_id profile) const;
-    std::expected<void, std::string> purge_all() const;
+    [[nodiscard]] std::expected<void, std::string> purge(model_profile_id profile) const;
+    [[nodiscard]] std::expected<void, std::string> purge_all() const;
 
     static std::expected<bool, std::string> verify_checksum(const std::filesystem::path& path,
                                                             const model_manifest_entry& entry);

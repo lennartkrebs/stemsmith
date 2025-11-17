@@ -40,7 +40,7 @@ inline std::unique_ptr<model_session> make_stub_session(model_profile_id profile
     const auto stem_count = static_cast<int>(profile_opt->stem_count);
     auto inference = [stem_count, frame_count, fill_value](const demucscpp::demucs_model&,
                                                            const Eigen::MatrixXf&,
-                                                           demucscpp::ProgressCallback cb)
+                                                           const demucscpp::ProgressCallback& cb)
     {
         if (cb)
         {

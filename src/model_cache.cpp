@@ -189,7 +189,7 @@ std::expected<model_handle, std::string> model_cache::download_and_stage(model_p
 
     std::filesystem::remove(staging, ec); // ignore failure
 
-    if (const auto fetch = fetcher_->fetch_weights(entry.url, staging); !fetch)
+    if (const auto fetch = fetcher_->fetch_weights(entry.url, staging, nullptr); !fetch)
     {
         std::filesystem::remove(staging, ec);
         return std::unexpected(fetch.error());

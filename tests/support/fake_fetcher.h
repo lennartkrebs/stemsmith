@@ -16,7 +16,7 @@ public:
 
     std::expected<void, std::string> fetch_weights(std::string_view /*url*/,
                                                    const std::filesystem::path& destination,
-                                                   progress_callback progress = {}) override
+                                                   progress_callback progress) override
     {
         ++call_count;
         std::ofstream out(destination, std::ios::binary);

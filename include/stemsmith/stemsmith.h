@@ -32,11 +32,11 @@ public:
     service(service&&) = delete;
     service& operator=(service&&) = delete;
 
-    job_runner& runner() noexcept
+    [[nodiscard]] job_runner& runner() const noexcept
     {
         return *runner_;
     }
-    model_cache& cache() noexcept
+    [[nodiscard]] model_cache& cache() const noexcept
     {
         return *cache_;
     }

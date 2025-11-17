@@ -40,7 +40,7 @@ public:
 
         model_session& operator*() const noexcept;
         model_session* operator->() const noexcept;
-        model_session* get() const noexcept;
+        [[nodiscard]] model_session* get() const noexcept;
 
     private:
         friend class model_session_pool;
