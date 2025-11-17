@@ -121,12 +121,12 @@ constexpr std::array k_profiles{make_profile(stemsmith::model_profile_id::balanc
                                              "balanced-four-stem",
                                              "Balanced 4-Stem",
                                              "ggml-model-htdemucs-4s-f16.bin",
-                                             {"vocals", "drums", "bass", "other"}),
+                                             {"drums", "bass", "other", "vocals"}),
                                 make_profile(stemsmith::model_profile_id::balanced_six_stem,
                                              "balanced-six-stem",
                                              "Balanced 6-Stem",
                                              "ggml-model-htdemucs-6s-f16.bin",
-                                             {"vocals", "drums", "bass", "piano", "guitar", "other"})};
+                                             {"drums", "bass", "other", "vocals", "piano", "guitar"})};
 
 const stemsmith::model_profile* find_profile(stemsmith::model_profile_id id)
 {

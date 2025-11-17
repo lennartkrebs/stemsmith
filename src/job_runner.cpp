@@ -71,7 +71,7 @@ std::expected<std::future<job_result>, std::string> job_runner::submit(const std
         std::lock_guard lock(mutex_);
         paths_by_id_[job_id] = job.input_path;
         context->job_id = job_id;
-        if (auto pending_it = pending_events_.find(job_id); pending_it != pending_events_.end())
+        if (const auto pending_it = pending_events_.find(job_id); pending_it != pending_events_.end())
         {
             pending = std::move(pending_it->second);
             pending_events_.erase(pending_it);
@@ -96,7 +96,7 @@ void job_runner::process_job(const job_descriptor& job, const std::atomic_bool& 
     demucscpp::ProgressCallback cb;
     if (event_callback_)
     {
-        job_descriptor job_copy = job;
+        const job_descriptor& job_copy = job;
         cb = [this, job_copy](float pct, const std::string& message)
         {
             if (const auto ctx = context_for(job_copy.input_path))

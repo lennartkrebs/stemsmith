@@ -26,7 +26,7 @@ TEST(job_config_test, defaults_are_correct)
     ASSERT_TRUE(profile.has_value());
     EXPECT_EQ(profile->key, "balanced-six-stem");
 
-    const std::vector<std::string> expected{"vocals", "drums", "bass", "piano", "guitar", "other"};
+    const std::vector<std::string> expected{"drums", "bass", "other", "vocals", "piano", "guitar"};
     EXPECT_EQ(config.resolved_stems(), expected);
     EXPECT_EQ(config.cache_root, std::filesystem::path{"build/cache"});
 }
@@ -55,7 +55,7 @@ TEST(job_config_test, resolves_all_stems_when_no_filter)
     EXPECT_EQ(config.profile, model_profile_id::balanced_four_stem);
     EXPECT_TRUE(config.stems_filter.empty());
 
-    const std::vector<std::string> expected{"vocals", "drums", "bass", "other"};
+    const std::vector<std::string> expected{"drums", "bass", "other", "vocals"};
     EXPECT_EQ(config.resolved_stems(), expected);
 }
 

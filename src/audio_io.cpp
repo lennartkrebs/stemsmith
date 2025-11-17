@@ -123,7 +123,7 @@ std::expected<audio_buffer, std::string> load_audio_file(const std::filesystem::
     audio_buffer buffer;
     buffer.sample_rate = TARGET_SAMPLE_RATE;
     buffer.channels = TARGET_NUM_CHANNELS;
-    buffer.samples = std::move(resampled.value());
+    buffer.samples = resampled.value();
 
     return buffer;
 }
