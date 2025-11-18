@@ -27,8 +27,7 @@ int curl_progress_callback(void* clientp,
                            curl_off_t /*ultotal*/,
                            curl_off_t /*ulnow*/)
 {
-    auto* payload = static_cast<progress_payload*>(clientp);
-    if (payload && payload->callback)
+    if (const auto* payload = static_cast<progress_payload*>(clientp); payload && payload->callback)
     {
         payload->callback(static_cast<std::size_t>(dlnow), static_cast<std::size_t>(dltotal));
     }
