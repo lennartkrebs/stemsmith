@@ -1,10 +1,15 @@
 #include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
 #include <filesystem>
 #include <fstream>
 #include <future>
 #include <gtest/gtest.h>
+#include <mutex>
 #include <optional>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "stemsmith/job_runner.h"
@@ -61,8 +66,8 @@ TEST(job_runner_test, resolves_future_on_completion)
     auto submit_result = runner.submit(input_path_wav);
     ASSERT_TRUE(submit_result.has_value());
 
-    auto future = std::move(submit_result.value());
-    const auto [input_path, output_dir, status, error] = future.get();
+    auto handle = std::move(submit_result.value());
+    const auto [input_path, output_dir, status, error] = handle.result().get();
 
     EXPECT_EQ(status, job_status::completed);
     EXPECT_EQ(input_path, input_path.lexically_normal());
@@ -70,9 +75,7 @@ TEST(job_runner_test, resolves_future_on_completion)
     EXPECT_FALSE(error.has_value());
     EXPECT_EQ(writes.size(), 6U);
     EXPECT_FALSE(progress_messages.empty());
-    EXPECT_TRUE(std::any_of(events.begin(),
-                            events.end(),
-                            [](const job_event& evt) { return evt.status == job_status::completed; }));
+    EXPECT_TRUE(std::ranges::any_of(events, [](const job_event& evt) { return evt.status == job_status::completed; }));
 }
 
 TEST(job_runner_test, emits_progress_events_in_order)
@@ -106,8 +109,11 @@ TEST(job_runner_test, emits_progress_events_in_order)
     auto submit_result = runner.submit(input_path);
     ASSERT_TRUE(submit_result.has_value());
 
-    submit_result->get();
-    const std::vector<float> expected{0.0f, 0.25f, 0.5f, 1.0f};
+    // Wait for completion
+    const auto future = submit_result->result();
+    const auto status = future.get().status;
+    ASSERT_EQ(status, job_status::completed);
+    const std::vector expected{0.0f, 0.25f, 0.5f, 1.0f};
     ASSERT_EQ(progress_values, expected);
 }
 
@@ -135,7 +141,9 @@ TEST(job_runner_test, reports_status_flow)
     auto submit_result = runner.submit(input_path);
     ASSERT_TRUE(submit_result.has_value());
 
-    submit_result->get();
+    const auto future = submit_result->result();
+    const auto status = future.get().status;
+    ASSERT_EQ(status, job_status::completed);
     std::vector<job_status> timeline;
     for (const auto& evt : events)
     {
@@ -170,11 +178,105 @@ TEST(job_runner_test, propagates_engine_errors_to_future)
     auto submit_result = runner.submit(input_path);
     ASSERT_TRUE(submit_result.has_value());
 
-    auto future = std::move(submit_result.value());
-    auto result = future.get();
+    auto result = submit_result->result().get();
     EXPECT_EQ(result.status, job_status::failed);
     ASSERT_TRUE(result.error.has_value());
     const auto error = result.error.value();
     EXPECT_NE(error.find("writer failed"), std::string::npos);
+}
+
+TEST(job_runner_test, handle_cancel_cancels_pending_job)
+{
+    auto loader = [](const std::filesystem::path&) -> std::expected<audio_buffer, std::string>
+    { return test::make_buffer(4); };
+
+    std::mutex writer_mutex;
+    std::condition_variable writer_cv;
+    bool allow_writes = false;
+    auto writer = [&](const std::filesystem::path&, const audio_buffer&) -> std::expected<void, std::string>
+    {
+        std::unique_lock lock(writer_mutex);
+        writer_cv.wait(lock, [&] { return allow_writes; });
+        return {};
+    };
+
+    model_session_pool pool([](model_profile_id id) -> std::expected<std::unique_ptr<model_session>, std::string>
+                            { return test::make_stub_session(id); });
+
+    const auto output_root = std::filesystem::temp_directory_path() / "stemsmith-job-handle";
+    std::filesystem::remove_all(output_root);
+
+    separation_engine engine(std::move(pool), output_root, loader, writer);
+    std::mutex events_mutex;
+    std::condition_variable events_cv;
+    bool first_job_running = false;
+    bool second_job_cancelled = false;
+    std::filesystem::create_directories(output_root);
+
+    const auto first_input = output_root / "first.wav";
+    const auto second_input = output_root / "second.wav";
+    {
+        std::ofstream out(first_input);
+        out << "data";
+    }
+    {
+        std::ofstream out(second_input);
+        out << "data";
+    }
+
+    job_runner runner({},
+                      std::move(engine),
+                      1,
+                      [&](const job_descriptor& job, const job_event& event)
+                      {
+                          std::lock_guard lock(events_mutex);
+                          if (job.input_path == first_input && event.status == job_status::running &&
+                              event.progress < 0.0f)
+                          {
+                              first_job_running = true;
+                              events_cv.notify_all();
+                          }
+                          if (job.input_path == second_input && event.status == job_status::cancelled)
+                          {
+                              second_job_cancelled = true;
+                              events_cv.notify_all();
+                          }
+                      });
+
+    auto first_handle_expected = runner.submit(first_input);
+    ASSERT_TRUE(first_handle_expected.has_value());
+    auto second_handle_expected = runner.submit(second_input);
+    ASSERT_TRUE(second_handle_expected.has_value());
+    auto first_handle = std::move(first_handle_expected.value());
+    auto second_handle = std::move(second_handle_expected.value());
+
+    {
+        std::unique_lock lock(events_mutex);
+        ASSERT_TRUE(events_cv.wait_for(lock, std::chrono::seconds(2), [&] { return first_job_running; }));
+    }
+
+    auto cancel_result = second_handle.cancel("Second job cancelled");
+    ASSERT_TRUE(cancel_result.has_value());
+
+    {
+        std::unique_lock lock(events_mutex);
+        ASSERT_TRUE(events_cv.wait_for(lock, std::chrono::seconds(2), [&] { return second_job_cancelled; }));
+    }
+
+    const auto cancelled = second_handle.result().get();
+    EXPECT_EQ(cancelled.status, job_status::cancelled);
+    ASSERT_TRUE(cancelled.error.has_value());
+    EXPECT_NE(cancelled.error->find("Second job cancelled"), std::string::npos);
+
+    {
+        std::lock_guard lock(writer_mutex);
+        allow_writes = true;
+    }
+    writer_cv.notify_all();
+
+    const auto completed = first_handle.result().get();
+    EXPECT_EQ(completed.status, job_status::completed);
+
+    std::filesystem::remove_all(output_root);
 }
 } // namespace stemsmith

@@ -9,7 +9,7 @@ namespace
 {
 separation_engine make_engine(model_cache& cache, std::filesystem::path output_root)
 {
-    return separation_engine(cache, std::move(output_root));
+    return {cache, std::move(output_root)};
 }
 } // namespace
 
@@ -31,16 +31,16 @@ job_runner::job_runner(job_config base_config,
                        std::function<void(const job_descriptor&, const job_event&)> event_callback)
     : catalog_(std::move(base_config))
     , engine_(std::move(engine))
-    , pool_(
-          worker_count,
-          [this](const job_descriptor& job, const std::atomic_bool& stop_flag) { process_job(job, stop_flag); },
-          [this](const job_event& event) { handle_event(event); })
     , event_callback_(std::move(event_callback))
+    , pool_(
+        worker_count,
+        [this](const job_descriptor& job, const std::atomic_bool& stop_flag) { process_job(job, stop_flag); },
+        [this](const job_event& event) { handle_event(event); })
 {
 }
 
-std::expected<std::future<job_result>, std::string> job_runner::submit(const std::filesystem::path& path,
-                                                                       const job_overrides& overrides)
+std::expected<job_handle, std::string> job_runner::submit(const std::filesystem::path& path,
+                                                          const job_overrides& overrides)
 {
     auto add_result = catalog_.add_file(path, overrides);
     if (!add_result)
@@ -51,7 +51,7 @@ std::expected<std::future<job_result>, std::string> job_runner::submit(const std
     const auto& job = catalog_.jobs().at(add_result.value());
     const auto context = std::make_shared<job_context>();
     context->job = job;
-    auto future = context->promise.get_future();
+    auto shared_future = context->promise.get_future().share();
 
     {
         std::lock_guard lock(mutex_);
@@ -83,7 +83,13 @@ std::expected<std::future<job_result>, std::string> job_runner::submit(const std
         handle_event(event);
     }
 
-    return future;
+    auto handle_state = std::make_shared<job_handle_state>();
+    handle_state->job = job;
+    handle_state->job_id = job_id;
+    handle_state->future = std::move(shared_future);
+    handle_state->pool = &pool_;
+
+    return job_handle(std::move(handle_state));
 }
 
 void job_runner::process_job(const job_descriptor& job, const std::atomic_bool& stop_flag)
