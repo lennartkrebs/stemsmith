@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <thread>
 
 #include "stemsmith/job_catalog.h"
@@ -19,6 +20,7 @@ class service
 {
 public:
     using event_callback = std::function<void(const job_descriptor&, const job_event&)>;
+    using weight_progress_callback = model_cache::weight_progress_callback;
 
     struct job_request
     {
@@ -31,11 +33,14 @@ public:
         job_config config,
         std::filesystem::path cache_root,
         std::filesystem::path output_root,
-        std::shared_ptr<weight_fetcher> fetcher,
+        std::shared_ptr<weight_fetcher> fetcher = {},
         std::size_t worker_count = std::thread::hardware_concurrency(),
-        service::event_callback callback = {});
+        event_callback callback = {},
+        weight_progress_callback weight_callback = {});
 
-    std::expected<job_handle, std::string> submit(job_request request) const;
+    [[nodiscard]] std::expected<job_handle, std::string> submit(job_request request) const;
+    [[nodiscard]] std::expected<model_handle, std::string> ensure_model_ready(model_profile_id profile) const;
+    [[nodiscard]] std::expected<void, std::string> purge_models(std::optional<model_profile_id> profile = std::nullopt) const;
 
     service(const service&) = delete;
     service& operator=(const service&) = delete;

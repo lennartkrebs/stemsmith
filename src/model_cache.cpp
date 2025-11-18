@@ -61,7 +61,8 @@ std::expected<bool, std::string> file_ready(const std::filesystem::path& path, c
 namespace stemsmith
 {
 std::expected<model_cache, std::string> model_cache::create(std::filesystem::path cache_root,
-                                                            std::shared_ptr<weight_fetcher> fetcher)
+                                                            std::shared_ptr<weight_fetcher> fetcher,
+                                                            weight_progress_callback progress_callback)
 {
     if (!fetcher)
     {
@@ -73,15 +74,27 @@ std::expected<model_cache, std::string> model_cache::create(std::filesystem::pat
     {
         return std::unexpected(manifest.error());
     }
-    return model_cache{std::move(cache_root), std::move(fetcher), std::move(manifest.value())};
+    return model_cache{std::move(cache_root),
+                       std::move(fetcher),
+                       std::move(manifest.value()),
+                       std::move(progress_callback)};
 }
 
 model_cache::model_cache(std::filesystem::path cache_root,
                          std::shared_ptr<weight_fetcher> fetcher,
                          model_manifest manifest)
+    : model_cache(std::move(cache_root), std::move(fetcher), std::move(manifest), {})
+{
+}
+
+model_cache::model_cache(std::filesystem::path cache_root,
+                         std::shared_ptr<weight_fetcher> fetcher,
+                         model_manifest manifest,
+                         weight_progress_callback progress_callback)
     : cache_root_(std::move(cache_root))
     , fetcher_(std::move(fetcher))
     , manifest_(std::move(manifest))
+    , progress_callback_(std::move(progress_callback))
 {
 }
 
@@ -189,7 +202,14 @@ std::expected<model_handle, std::string> model_cache::download_and_stage(model_p
 
     std::filesystem::remove(staging, ec); // ignore failure
 
-    if (const auto fetch = fetcher_->fetch_weights(entry.url, staging, nullptr); !fetch)
+    weight_fetcher::progress_callback progress;
+    if (progress_callback_)
+    {
+        progress = [this, profile](std::size_t downloaded, std::size_t total)
+        { progress_callback_(profile, downloaded, total); };
+    }
+
+    if (const auto fetch = fetcher_->fetch_weights(entry.url, staging, progress); !fetch)
     {
         std::filesystem::remove(staging, ec);
         return std::unexpected(fetch.error());

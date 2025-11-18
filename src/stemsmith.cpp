@@ -3,6 +3,7 @@
 #include <memory>
 #include <system_error>
 
+#include "stemsmith/http_weight_fetcher.h"
 #include "stemsmith/model_cache.h"
 #include "stemsmith/weight_fetcher.h"
 
@@ -30,16 +31,42 @@ std::expected<job_handle, std::string> service::submit(job_request request) cons
     return runner_->submit(request.input_path, request.overrides, std::move(request.observer));
 }
 
+std::expected<void, std::string> service::purge_models(std::optional<model_profile_id> profile) const
+{
+    if (!cache_)
+    {
+        return std::unexpected("Model cache is not available");
+    }
+
+    if (profile)
+    {
+        return cache_->purge(*profile);
+    }
+
+    return cache_->purge_all();
+}
+
+std::expected<model_handle, std::string> service::ensure_model_ready(model_profile_id profile) const
+{
+    if (!cache_)
+    {
+        return std::unexpected("Model cache is not available");
+    }
+    return cache_->ensure_ready(profile);
+}
+
 std::expected<std::unique_ptr<service>, std::string> service::create(job_config config,
                                                                      std::filesystem::path cache_root,
                                                                      std::filesystem::path output_root,
                                                                      std::shared_ptr<weight_fetcher> fetcher,
                                                                      std::size_t worker_count,
-                                                                     event_callback callback)
+                                                                     event_callback callback,
+                                                                     weight_progress_callback weight_callback)
 {
     if (!fetcher)
     {
-        return std::unexpected("weight_fetcher must not be null");
+        // Default to HTTP fetcher
+        fetcher = std::make_shared<http_weight_fetcher>();
     }
 
     std::error_code ec;
@@ -61,7 +88,7 @@ std::expected<std::unique_ptr<service>, std::string> service::create(job_config 
         }
     }
 
-    auto cache_result = model_cache::create(std::move(cache_root), std::move(fetcher));
+    auto cache_result = model_cache::create(std::move(cache_root), std::move(fetcher), std::move(weight_callback));
     if (!cache_result)
     {
         return std::unexpected(cache_result.error());

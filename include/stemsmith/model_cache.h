@@ -2,6 +2,7 @@
 
 #include <expected>
 #include <filesystem>
+#include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -29,21 +30,24 @@ struct model_handle
 class model_cache
 {
 public:
+    using weight_progress_callback =
+        std::function<void(model_profile_id profile, std::size_t bytes_downloaded, std::size_t total_bytes)>;
+
     static std::expected<model_cache, std::string> create(std::filesystem::path cache_root,
-                                                          std::shared_ptr<weight_fetcher> fetcher);
+                                                          std::shared_ptr<weight_fetcher> fetcher,
+                                                          weight_progress_callback progress_callback = {});
 
     model_cache(std::filesystem::path cache_root, std::shared_ptr<weight_fetcher> fetcher, model_manifest manifest);
+    model_cache(std::filesystem::path cache_root,
+                std::shared_ptr<weight_fetcher> fetcher,
+                model_manifest manifest,
+                weight_progress_callback progress_callback);
 
     // Disable copy, enable move
     model_cache(model_cache&&) noexcept = default;
     model_cache& operator=(model_cache&&) noexcept = default;
     model_cache(const model_cache&) = delete;
     model_cache& operator=(const model_cache&) = delete;
-
-    [[nodiscard]] const std::filesystem::path& root() const noexcept
-    {
-        return cache_root_;
-    }
 
     std::expected<model_handle, std::string> ensure_ready(model_profile_id profile);
     [[nodiscard]] std::expected<void, std::string> purge(model_profile_id profile) const;
@@ -56,6 +60,7 @@ private:
     std::filesystem::path cache_root_;
     std::shared_ptr<weight_fetcher> fetcher_;
     model_manifest manifest_;
+    weight_progress_callback progress_callback_;
 
     struct profile_state
     {
@@ -65,7 +70,7 @@ private:
 
     profile_state& state_for(model_profile_id profile);
     std::expected<model_handle, std::string> hydrate(model_profile_id profile, const model_manifest_entry& entry);
-    std::expected<model_handle, std::string> download_and_stage(model_profile_id profile,
-                                                                const model_manifest_entry& entry) const;
+    [[nodiscard]] std::expected<model_handle, std::string> download_and_stage(model_profile_id profile,
+                                                                              const model_manifest_entry& entry) const;
 };
 } // namespace stemsmith
