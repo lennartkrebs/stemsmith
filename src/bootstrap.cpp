@@ -1,4 +1,4 @@
-#include "stemsmith/bootstrap.h"
+#include "bootstrap.h"
 
 #include <model.hpp>
 

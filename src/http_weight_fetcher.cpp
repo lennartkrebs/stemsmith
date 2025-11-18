@@ -1,4 +1,4 @@
-#include "stemsmith/http_weight_fetcher.h"
+#include "http_weight_fetcher.h"
 
 #include <curl/curl.h>
 #include <filesystem>

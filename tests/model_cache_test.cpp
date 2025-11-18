@@ -8,8 +8,8 @@
 #include <system_error>
 
 #include "fake_fetcher.h"
-#include "stemsmith/model_cache.h"
-#include "stemsmith/model_manifest.h"
+#include "model_cache.h"
+#include "model_manifest.h"
 #include "stemsmith/weight_fetcher.h"
 
 namespace

@@ -1,4 +1,4 @@
-#include "stemsmith/job_catalog.h"
+#include "job_catalog.h"
 
 #include <system_error>
 #include <utility>

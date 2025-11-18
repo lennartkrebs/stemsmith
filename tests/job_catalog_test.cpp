@@ -4,7 +4,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "stemsmith/job_catalog.h"
+#include "job_catalog.h"
 
 namespace
 {

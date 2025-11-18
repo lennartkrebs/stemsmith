@@ -8,21 +8,13 @@
 #include <mutex>
 #include <string>
 
-#include "stemsmith/job_catalog.h"
-#include "stemsmith/model_manifest.h"
+#include "job_catalog.h"
+#include "model_manifest.h"
+#include "stemsmith/service.h"
 
 namespace stemsmith
 {
 struct weight_fetcher;
-
-struct model_handle
-{
-    model_profile_id profile;
-    std::filesystem::path weights_path;
-    std::string sha256;
-    std::uint64_t size_bytes{};
-    bool was_cached{false};
-};
 
 /**
  * @brief Manages downloading and caching of Demucs model weights.
@@ -30,9 +22,6 @@ struct model_handle
 class model_cache
 {
 public:
-    using weight_progress_callback =
-        std::function<void(model_profile_id profile, std::size_t bytes_downloaded, std::size_t total_bytes)>;
-
     static std::expected<model_cache, std::string> create(std::filesystem::path cache_root,
                                                           std::shared_ptr<weight_fetcher> fetcher,
                                                           weight_progress_callback progress_callback = {});

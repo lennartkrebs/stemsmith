@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 #include <string>
 
-#include "stemsmith/model_session_pool.h"
+#include "model_session_pool.h"
 #include "support/fake_session.h"
 
 namespace

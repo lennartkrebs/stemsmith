@@ -1,4 +1,4 @@
-#include "stemsmith/model_manifest.h"
+#include "model_manifest.h"
 
 #include <expected>
 #include <fstream>
@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "stemsmith/job_config.h"
-#include "stemsmith/json_utils.h"
+#include "json_utils.h"
 
 namespace
 {

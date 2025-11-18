@@ -5,9 +5,9 @@
 #include <string>
 #include <vector>
 
-#include "stemsmith/audio_buffer.h"
+#include "audio_buffer.h"
 #include "stemsmith/job_config.h"
-#include "stemsmith/model_session.h"
+#include "model_session.h"
 
 namespace
 {

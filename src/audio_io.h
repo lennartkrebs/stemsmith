@@ -4,7 +4,7 @@
 #include <filesystem>
 #include <string>
 
-#include "stemsmith/audio_buffer.h"
+#include "audio_buffer.h"
 
 namespace stemsmith
 {

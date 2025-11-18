@@ -1,4 +1,4 @@
-#include "stemsmith/audio_io.h"
+#include "audio_io.h"
 
 #include <expected>
 #include <filesystem>

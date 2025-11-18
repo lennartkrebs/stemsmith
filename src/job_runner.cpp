@@ -1,35 +1,90 @@
-#include "stemsmith/job_runner.h"
+#include "job_runner.h"
 
 #include <stdexcept>
 
 namespace stemsmith
 {
 
-namespace
-{
-separation_engine make_engine(model_cache& cache, std::filesystem::path output_root)
-{
-    return {cache, std::move(output_root)};
-}
-} // namespace
+job_handle::job_handle() = default;
 
-job_runner::job_runner(job_config base_config,
-                       model_cache& cache,
+job_handle::job_handle(std::shared_ptr<job_handle_state> state) : state_(std::move(state)) {}
+
+std::size_t job_handle::id() const noexcept
+{
+    if (!state_)
+    {
+        return static_cast<std::size_t>(-1);
+    }
+    return state_->job_id;
+}
+
+const job_descriptor& job_handle::descriptor() const
+{
+    if (!state_)
+    {
+        throw std::runtime_error("Job handle is empty");
+    }
+    return state_->job;
+}
+
+std::shared_future<job_result> job_handle::result() const
+{
+    if (!state_)
+    {
+        return {};
+    }
+    return state_->future;
+}
+
+std::expected<void, std::string> job_handle::cancel(std::string reason) const
+{
+    if (!state_)
+    {
+        return std::unexpected("Job handle is empty");
+    }
+
+    if (!state_->pool)
+    {
+        return std::unexpected("Worker pool unavailable");
+    }
+
+    if (bool expected = false; !state_->cancel_requested.compare_exchange_strong(expected, true))
+    {
+        return std::unexpected("Cancellation already requested");
+    }
+
+    if (!state_->pool->cancel(state_->job_id, std::move(reason)))
+    {
+        return std::unexpected("Job is no longer cancellable");
+    }
+
+    return {};
+}
+
+void job_handle::set_observer(job_observer observer) const
+{
+    if (!state_)
+    {
+        return;
+    }
+    std::lock_guard lock(state_->observer_mutex);
+    state_->observer = std::move(observer);
+}
+
+job_runner::job_runner(model_cache& cache,
                        std::filesystem::path output_root,
                        std::size_t worker_count,
                        std::function<void(const job_descriptor&, const job_event&)> event_callback)
-    : job_runner(std::move(base_config),
-                 make_engine(cache, std::move(output_root)),
+    : job_runner(separation_engine(cache, std::move(output_root)),
                  worker_count,
                  std::move(event_callback))
 {
 }
 
-job_runner::job_runner(job_config base_config,
-                       separation_engine engine,
+job_runner::job_runner(separation_engine engine,
                        std::size_t worker_count,
                        std::function<void(const job_descriptor&, const job_event&)> event_callback)
-    : catalog_(std::move(base_config))
+    : catalog_(job_config{})
     , engine_(std::move(engine))
     , event_callback_(std::move(event_callback))
     , pool_(

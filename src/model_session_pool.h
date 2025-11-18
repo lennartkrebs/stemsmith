@@ -8,8 +8,8 @@
 #include <vector>
 
 #include "stemsmith/job_config.h"
-#include "stemsmith/model_cache.h"
-#include "stemsmith/model_session.h"
+#include "model_cache.h"
+#include "model_session.h"
 
 namespace stemsmith
 {

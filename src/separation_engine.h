@@ -4,11 +4,11 @@
 #include <filesystem>
 #include <functional>
 
-#include "stemsmith/audio_buffer.h"
-#include "stemsmith/audio_io.h"
-#include "stemsmith/job_catalog.h"
-#include "stemsmith/model_cache.h"
-#include "stemsmith/model_session_pool.h"
+#include "audio_buffer.h"
+#include "audio_io.h"
+#include "job_catalog.h"
+#include "model_cache.h"
+#include "model_session_pool.h"
 
 namespace stemsmith
 {

@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "stemsmith/audio_io.h"
+#include "audio_io.h"
 
 namespace
 {

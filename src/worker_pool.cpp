@@ -1,12 +1,10 @@
-#include "stemsmith/worker_pool.h"
+#include "worker_pool.h"
 
 #include <algorithm>
 #include <exception>
 #include <ranges>
 #include <stdexcept>
 #include <utility>
-
-#include "stemsmith/job_catalog.h"
 
 namespace stemsmith
 {

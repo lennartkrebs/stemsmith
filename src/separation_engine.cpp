@@ -1,4 +1,4 @@
-#include "stemsmith/separation_engine.h"
+#include "separation_engine.h"
 
 #include <algorithm>
 #include <string_view>

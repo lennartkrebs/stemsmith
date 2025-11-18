@@ -10,7 +10,6 @@ namespace stemsmith
 {
 TEST(stemsmith_service_test, creates_runner_with_cache)
 {
-    job_config config;
     const auto cache_root = std::filesystem::temp_directory_path() / "stemsmith-service-cache";
     const auto output_root = std::filesystem::temp_directory_path() / "stemsmith-service-output";
     std::filesystem::remove_all(cache_root);
@@ -18,13 +17,13 @@ TEST(stemsmith_service_test, creates_runner_with_cache)
 
     auto fetcher = std::make_shared<test::fake_fetcher>("payload");
     bool weight_progress_called = false;
-    service::weight_progress_callback weight_callback = [&](model_profile_id, std::size_t downloaded, std::size_t total)
+    weight_progress_callback weight_callback = [&](model_profile_id, std::size_t downloaded, std::size_t total)
     {
         weight_progress_called = true;
         EXPECT_GE(total, downloaded);
     };
 
-    auto service_result = service::create(config, cache_root, output_root, fetcher, 1, {}, weight_callback);
+    auto service_result = service::create(cache_root, output_root, fetcher, 1, {}, weight_callback);
     ASSERT_TRUE(service_result.has_value());
     auto svc = std::move(service_result.value());
     ASSERT_NE(svc, nullptr);
@@ -35,7 +34,7 @@ TEST(stemsmith_service_test, creates_runner_with_cache)
     const auto submit = svc->submit({});
     EXPECT_FALSE(submit.has_value());
 
-    service::job_request request;
+    job_request request;
     request.input_path = output_root / "missing.wav";
     const auto service_submit = svc->submit(std::move(request));
     EXPECT_FALSE(service_submit.has_value());

@@ -61,6 +61,8 @@ target_include_directories(${PROJECT_NAME}
         ${asio_SOURCE_DIR}/asio/include
         ${CMAKE_CURRENT_SOURCE_DIR}/external/demucs.cpp/src
         ${CMAKE_CURRENT_SOURCE_DIR}/external/demucs.cpp/vendor/libnyquist/include
+        PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -127,6 +129,7 @@ target_link_libraries(${PROJECT_NAME}_test
 target_include_directories(${PROJECT_NAME}_test
         PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/support
 )
 

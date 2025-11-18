@@ -9,22 +9,10 @@
 #include <unordered_set>
 #include <vector>
 
-#include "stemsmith/job_config.h"
+#include "stemsmith/service.h"
 
 namespace stemsmith
 {
-struct job_overrides
-{
-    std::optional<model_profile_id> profile{};
-    std::optional<std::vector<std::string>> stems_filter{};
-};
-
-struct job_descriptor
-{
-    std::filesystem::path input_path;
-    job_config config;
-};
-
 /**
  * @brief Manages a catalog of jobs to be processed.
  */

@@ -1,4 +1,4 @@
-#include "stemsmith/model_session.h"
+#include "model_session.h"
 
 #include <Eigen/Dense>
 #include <algorithm>

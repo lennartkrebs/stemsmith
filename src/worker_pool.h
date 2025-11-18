@@ -13,28 +13,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include "stemsmith/job_catalog.h"
+#include "stemsmith/service.h"
 
 namespace stemsmith
 {
-
-enum class job_status
-{
-    queued,
-    running,
-    completed,
-    failed,
-    cancelled
-};
-
-struct job_event
-{
-    std::size_t id{};
-    job_status status{job_status::queued};
-    float progress{-1.0f};
-    std::string message{};
-    std::optional<std::string> error{};
-};
 
 /**
  * @brief A pool of worker threads to process jobs concurrently.

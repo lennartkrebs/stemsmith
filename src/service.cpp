@@ -3,9 +3,9 @@
 #include <memory>
 #include <system_error>
 
-#include "stemsmith/http_weight_fetcher.h"
-#include "stemsmith/model_cache.h"
-#include "stemsmith/weight_fetcher.h"
+#include "http_weight_fetcher.h"
+#include "job_runner.h"
+#include "model_cache.h"
 
 namespace stemsmith
 {
@@ -15,6 +15,8 @@ service::service(std::shared_ptr<model_cache> cache, std::unique_ptr<job_runner>
     , runner_(std::move(runner))
 {
 }
+
+service::~service() = default;
 
 std::expected<job_handle, std::string> service::submit(job_request request) const
 {
@@ -55,8 +57,7 @@ std::expected<model_handle, std::string> service::ensure_model_ready(model_profi
     return cache_->ensure_ready(profile);
 }
 
-std::expected<std::unique_ptr<service>, std::string> service::create(job_config config,
-                                                                     std::filesystem::path cache_root,
+std::expected<std::unique_ptr<service>, std::string> service::create(std::filesystem::path cache_root,
                                                                      std::filesystem::path output_root,
                                                                      std::shared_ptr<weight_fetcher> fetcher,
                                                                      std::size_t worker_count,
@@ -95,8 +96,7 @@ std::expected<std::unique_ptr<service>, std::string> service::create(job_config 
     }
     auto cache_ptr = std::make_shared<model_cache>(std::move(cache_result.value()));
 
-    auto runner = std::make_unique<job_runner>(std::move(config),
-                                               *cache_ptr,
+    auto runner = std::make_unique<job_runner>(*cache_ptr,
                                                std::move(output_root),
                                                worker_count,
                                                std::move(callback));

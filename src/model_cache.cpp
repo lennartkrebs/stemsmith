@@ -1,4 +1,4 @@
-#include "stemsmith/model_cache.h"
+#include "model_cache.h"
 
 #include <expected>
 #include <fstream>
@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "picosha2.h"
-#include "stemsmith/model_manifest.h"
+#include "model_manifest.h"
 #include "stemsmith/weight_fetcher.h"
 
 namespace

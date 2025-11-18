@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "stemsmith/json_utils.h"
+#include "json_utils.h"
 
 namespace
 {

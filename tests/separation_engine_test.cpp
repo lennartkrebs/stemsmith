@@ -4,9 +4,9 @@
 #include <string>
 #include <vector>
 
-#include "stemsmith/job_catalog.h"
-#include "stemsmith/model_session_pool.h"
-#include "stemsmith/separation_engine.h"
+#include "job_catalog.h"
+#include "model_session_pool.h"
+#include "separation_engine.h"
 #include "support/fake_session.h"
 
 namespace stemsmith

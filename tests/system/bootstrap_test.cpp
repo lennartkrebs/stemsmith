@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "stemsmith/bootstrap.h"
+#include "bootstrap.h"
 
 namespace
 {

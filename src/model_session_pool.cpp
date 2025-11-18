@@ -1,4 +1,4 @@
-#include "stemsmith/model_session_pool.h"
+#include "model_session_pool.h"
 
 #include <mutex>
 #include <utility>

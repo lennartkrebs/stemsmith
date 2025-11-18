@@ -1,3 +1,10 @@
+/**
+ * @file job_config.h
+ * @brief Structures for describing Demucs profiles and per-job configuration.
+ *
+ * Applications construct a base ::stemsmith::job_config for the service and
+ * optionally adapt it on a per-job basis via overrides (see ::stemsmith::job_request).
+ */
 #pragma once
 
 #include <array>
