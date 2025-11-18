@@ -38,7 +38,7 @@ public:
 
 private:
     std::filesystem::path output_root_;
-    model_session_pool pool_;
+    model_session_pool model_session_pool_;
     audio_loader loader_;
     audio_writer writer_;
 };

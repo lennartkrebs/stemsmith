@@ -182,7 +182,7 @@ std::expected<separation_result, std::string> model_session::separate(
             for (int ch = 0; ch < kExpectedChannels; ++ch)
             {
                 stem_buffer.samples[frame * kExpectedChannels + ch] =
-                    outputs(idx, ch, static_cast<Eigen::Index>(frame));
+                    outputs(static_cast<long>(idx), ch, static_cast<Eigen::Index>(frame));
             }
         }
 

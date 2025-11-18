@@ -25,7 +25,12 @@ TEST(stemsmith_service_test, creates_runner_with_cache)
     EXPECT_TRUE(std::filesystem::exists(cache_root));
     EXPECT_TRUE(std::filesystem::exists(output_root) || std::filesystem::create_directories(output_root));
 
-    const auto submit = svc->runner().submit(output_root / "missing.wav");
+    const auto submit = svc->submit({});
     EXPECT_FALSE(submit.has_value());
+
+    service::job_request request;
+    request.input_path = output_root / "missing.wav";
+    const auto service_submit = svc->submit(std::move(request));
+    EXPECT_FALSE(service_submit.has_value());
 }
 } // namespace stemsmith

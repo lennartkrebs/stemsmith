@@ -185,6 +185,104 @@ TEST(job_runner_test, propagates_engine_errors_to_future)
     EXPECT_NE(error.find("writer failed"), std::string::npos);
 }
 
+TEST(job_runner_test, request_observer_receives_events)
+{
+    auto loader = [](const std::filesystem::path&) -> std::expected<audio_buffer, std::string>
+    { return test::make_buffer(4); };
+    auto writer = [](const std::filesystem::path&, const audio_buffer&) -> std::expected<void, std::string>
+    { return {}; };
+
+    model_session_pool pool([](model_profile_id id) -> std::expected<std::unique_ptr<model_session>, std::string>
+                            { return test::make_stub_session(id); });
+
+    const auto output_root = std::filesystem::temp_directory_path() / "stemsmith-job-request-observer";
+    std::filesystem::remove_all(output_root);
+
+    separation_engine engine(std::move(pool), output_root, loader, writer);
+    job_runner runner({}, std::move(engine), 1);
+
+    std::vector<job_status> statuses;
+    std::mutex statuses_mutex;
+    job_observer observer;
+    observer.callback = [&](const job_descriptor&, const job_event& event)
+    {
+        if (event.progress < 0.0f)
+        {
+            std::lock_guard lock(statuses_mutex);
+            statuses.push_back(event.status);
+        }
+    };
+
+    const auto input_path = write_temp_wav();
+    auto handle_expected = runner.submit(input_path, {}, std::move(observer));
+    ASSERT_TRUE(handle_expected.has_value());
+
+    const auto result = handle_expected->result().get();
+    EXPECT_EQ(result.status, job_status::completed);
+
+    std::lock_guard lock(statuses_mutex);
+    ASSERT_GE(statuses.size(), 3U);
+    EXPECT_EQ(statuses.front(), job_status::queued);
+    EXPECT_EQ(statuses.back(), job_status::completed);
+}
+
+TEST(job_runner_test, handle_observer_receives_events)
+{
+    auto loader = [](const std::filesystem::path&) -> std::expected<audio_buffer, std::string>
+    { return test::make_buffer(4); };
+
+    std::mutex writer_mutex;
+    std::condition_variable writer_cv;
+    bool allow_write = false;
+    auto writer = [&](const std::filesystem::path&, const audio_buffer&) -> std::expected<void, std::string>
+    {
+        std::unique_lock lock(writer_mutex);
+        writer_cv.wait(lock, [&] { return allow_write; });
+        return {};
+    };
+
+    model_session_pool pool([](model_profile_id id) -> std::expected<std::unique_ptr<model_session>, std::string>
+                            { return test::make_stub_session(id); });
+
+    const auto output_root = std::filesystem::temp_directory_path() / "stemsmith-job-handle-observer";
+    std::filesystem::remove_all(output_root);
+
+    separation_engine engine(std::move(pool), output_root, loader, writer);
+    job_runner runner({}, std::move(engine), 1);
+
+    const auto input_path = write_temp_wav();
+    auto handle_expected = runner.submit(input_path);
+    ASSERT_TRUE(handle_expected.has_value());
+
+    std::mutex observer_mutex;
+    std::condition_variable observer_cv;
+    bool saw_completion = false;
+    job_observer observer;
+    observer.callback = [&](const job_descriptor&, const job_event& event)
+    {
+        if (event.status == job_status::completed)
+        {
+            std::lock_guard lock(observer_mutex);
+            saw_completion = true;
+            observer_cv.notify_all();
+        }
+    };
+
+    handle_expected->set_observer(std::move(observer));
+
+    {
+        std::lock_guard lock(writer_mutex);
+        allow_write = true;
+    }
+    writer_cv.notify_all();
+
+    const auto result = handle_expected->result().get();
+    EXPECT_EQ(result.status, job_status::completed);
+
+    std::unique_lock lock(observer_mutex);
+    ASSERT_TRUE(observer_cv.wait_for(lock, std::chrono::seconds(2), [&] { return saw_completion; }));
+}
+
 TEST(job_runner_test, handle_cancel_cancels_pending_job)
 {
     auto loader = [](const std::filesystem::path&) -> std::expected<audio_buffer, std::string>

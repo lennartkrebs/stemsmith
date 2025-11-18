@@ -28,6 +28,11 @@ struct job_result
     std::optional<std::string> error{};
 };
 
+struct job_observer
+{
+    std::function<void(const job_descriptor&, const job_event&)> callback{};
+};
+
 struct job_handle_state
 {
     job_descriptor job;
@@ -35,6 +40,17 @@ struct job_handle_state
     std::shared_future<job_result> future;
     worker_pool* pool{nullptr};
     std::atomic_bool cancel_requested{false};
+    mutable std::mutex observer_mutex;
+    job_observer observer;
+
+    void notify(const job_descriptor& descriptor, const job_event& event) const
+    {
+        std::lock_guard lock(observer_mutex);
+        if (observer.callback)
+        {
+            observer.callback(descriptor, event);
+        }
+    }
 };
 
 class job_handle
@@ -46,6 +62,7 @@ public:
     [[nodiscard]] const job_descriptor& descriptor() const;
     [[nodiscard]] std::shared_future<job_result> result() const;
     [[nodiscard]] std::expected<void, std::string> cancel(std::string reason = {}) const;
+    void set_observer(job_observer observer) const;
     explicit operator bool() const noexcept
     {
         return static_cast<bool>(state_);
@@ -73,7 +90,8 @@ public:
                std::function<void(const job_descriptor&, const job_event&)> event_callback = {});
 
     std::expected<job_handle, std::string> submit(const std::filesystem::path& path,
-                                                  const job_overrides& overrides = {});
+                                                  const job_overrides& overrides = {},
+                                                  job_observer observer = {});
 
 private:
     struct job_context
@@ -83,11 +101,14 @@ private:
         std::optional<std::string> error;
         job_descriptor job;
         std::size_t job_id{static_cast<std::size_t>(-1)};
+        job_observer observer;
+        std::weak_ptr<job_handle_state> handle_state;
     };
 
     void process_job(const job_descriptor& job, const std::atomic_bool& stop_flag);
     void handle_event(const job_event& event);
     std::shared_ptr<job_context> context_for(const std::filesystem::path& path) const;
+    void notify_observers(const std::shared_ptr<job_context>& context, const job_event& event) const;
 
     job_catalog catalog_;
     separation_engine engine_;
@@ -152,6 +173,16 @@ inline std::expected<void, std::string> job_handle::cancel(std::string reason) c
     }
 
     return {};
+}
+
+inline void job_handle::set_observer(job_observer observer) const
+{
+    if (!state_)
+    {
+        return;
+    }
+    std::lock_guard lock(state_->observer_mutex);
+    state_->observer = std::move(observer);
 }
 
 } // namespace stemsmith

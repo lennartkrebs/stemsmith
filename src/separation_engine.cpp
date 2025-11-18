@@ -21,7 +21,7 @@ separation_engine::separation_engine(model_cache& cache,
                                      audio_loader loader,
                                      audio_writer writer)
     : output_root_(std::move(output_root))
-    , pool_(cache)
+    , model_session_pool_(cache)
     , loader_(std::move(loader))
     , writer_(std::move(writer))
 {
@@ -32,7 +32,7 @@ separation_engine::separation_engine(model_session_pool&& pool,
                                      audio_loader loader,
                                      audio_writer writer)
     : output_root_(std::move(output_root))
-    , pool_(std::move(pool))
+    , model_session_pool_(std::move(pool))
     , loader_(std::move(loader))
     , writer_(std::move(writer))
 {
@@ -56,7 +56,7 @@ std::expected<std::filesystem::path, std::string> separation_engine::process(con
         return std::unexpected(audio.error());
     }
 
-    auto session_handle = pool_.acquire(job.config.profile);
+    auto session_handle = model_session_pool_.acquire(job.config.profile);
     if (!session_handle)
     {
         return std::unexpected(session_handle.error());
@@ -84,7 +84,7 @@ std::expected<std::filesystem::path, std::string> separation_engine::process(con
         return std::unexpected(result.error());
     }
 
-    const auto job_dir = job_output_directory(output_root_, job);
+    auto job_dir = job_output_directory(output_root_, job);
     std::error_code ec;
     std::filesystem::create_directories(job_dir, ec);
     if (ec)

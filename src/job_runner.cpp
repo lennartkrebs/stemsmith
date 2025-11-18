@@ -33,14 +33,15 @@ job_runner::job_runner(job_config base_config,
     , engine_(std::move(engine))
     , event_callback_(std::move(event_callback))
     , pool_(
-        worker_count,
-        [this](const job_descriptor& job, const std::atomic_bool& stop_flag) { process_job(job, stop_flag); },
-        [this](const job_event& event) { handle_event(event); })
+          worker_count,
+          [this](const job_descriptor& job, const std::atomic_bool& stop_flag) { process_job(job, stop_flag); },
+          [this](const job_event& event) { handle_event(event); })
 {
 }
 
 std::expected<job_handle, std::string> job_runner::submit(const std::filesystem::path& path,
-                                                          const job_overrides& overrides)
+                                                          const job_overrides& overrides,
+                                                          job_observer observer)
 {
     auto add_result = catalog_.add_file(path, overrides);
     if (!add_result)
@@ -66,11 +67,19 @@ std::expected<job_handle, std::string> job_runner::submit(const std::filesystem:
         return std::unexpected("Worker pool is shut down");
     }
 
+    auto handle_state = std::make_shared<job_handle_state>();
+    handle_state->job = job;
+    handle_state->job_id = job_id;
+    handle_state->future = shared_future;
+    handle_state->pool = &pool_;
+
     std::vector<job_event> pending;
     {
         std::lock_guard lock(mutex_);
         paths_by_id_[job_id] = job.input_path;
         context->job_id = job_id;
+        context->observer = std::move(observer);
+        context->handle_state = handle_state;
         if (const auto pending_it = pending_events_.find(job_id); pending_it != pending_events_.end())
         {
             pending = std::move(pending_it->second);
@@ -83,12 +92,6 @@ std::expected<job_handle, std::string> job_runner::submit(const std::filesystem:
         handle_event(event);
     }
 
-    auto handle_state = std::make_shared<job_handle_state>();
-    handle_state->job = job;
-    handle_state->job_id = job_id;
-    handle_state->future = std::move(shared_future);
-    handle_state->pool = &pool_;
-
     return job_handle(std::move(handle_state));
 }
 
@@ -99,25 +102,30 @@ void job_runner::process_job(const job_descriptor& job, const std::atomic_bool& 
         return;
     }
 
-    demucscpp::ProgressCallback cb;
-    if (event_callback_)
+    const job_descriptor& job_copy = job;
+    demucscpp::ProgressCallback cb = [this, job_copy, &stop_flag](float pct, const std::string& message)
     {
-        const job_descriptor& job_copy = job;
-        cb = [this, job_copy](float pct, const std::string& message)
+        if (const auto ctx = context_for(job_copy.input_path))
         {
-            if (const auto ctx = context_for(job_copy.input_path))
-            {
-                job_event evt;
-                evt.id = ctx->job_id;
-                evt.status = job_status::running;
-                evt.progress = pct;
-                evt.message = message;
-                event_callback_(job_copy, evt);
-            }
-        };
-    }
+            job_event evt;
+            evt.id = ctx->job_id;
+            evt.status = job_status::running;
+            evt.progress = pct;
+            evt.message = message;
+            notify_observers(ctx, evt);
+        }
+
+        if (stop_flag.load())
+        {
+            throw std::runtime_error("Job cancelled");
+        }
+    };
 
     const auto result = engine_.process(job, std::move(cb));
+    if (stop_flag.load())
+    {
+        return;
+    }
     const auto context = context_for(job.input_path);
 
     if (!result)
@@ -169,10 +177,7 @@ void job_runner::handle_event(const job_event& event)
         return;
     }
 
-    if (context && event_callback_)
-    {
-        event_callback_(context->job, event);
-    }
+    notify_observers(context, event);
 
     switch (event.status)
     {
@@ -216,6 +221,29 @@ std::shared_ptr<job_runner::job_context> job_runner::context_for(const std::file
         return {};
     }
     return it->second;
+}
+
+void job_runner::notify_observers(const std::shared_ptr<job_context>& context, const job_event& event) const
+{
+    if (!context)
+    {
+        return;
+    }
+
+    if (event_callback_)
+    {
+        event_callback_(context->job, event);
+    }
+
+    if (context->observer.callback)
+    {
+        context->observer.callback(context->job, event);
+    }
+
+    if (const auto handle_state = context->handle_state.lock())
+    {
+        handle_state->notify(context->job, event);
+    }
 }
 
 } // namespace stemsmith

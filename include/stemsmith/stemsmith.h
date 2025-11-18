@@ -6,6 +6,7 @@
 #include <memory>
 #include <thread>
 
+#include "stemsmith/job_catalog.h"
 #include "stemsmith/job_config.h"
 #include "stemsmith/job_runner.h"
 #include "stemsmith/model_cache.h"
@@ -19,6 +20,13 @@ class service
 public:
     using event_callback = std::function<void(const job_descriptor&, const job_event&)>;
 
+    struct job_request
+    {
+        std::filesystem::path input_path;
+        job_overrides overrides{};
+        job_observer observer{};
+    };
+
     static std::expected<std::unique_ptr<service>, std::string> create(
         job_config config,
         std::filesystem::path cache_root,
@@ -27,23 +35,15 @@ public:
         std::size_t worker_count = std::thread::hardware_concurrency(),
         service::event_callback callback = {});
 
+    std::expected<job_handle, std::string> submit(job_request request) const;
+
     service(const service&) = delete;
     service& operator=(const service&) = delete;
     service(service&&) = delete;
     service& operator=(service&&) = delete;
 
-    [[nodiscard]] job_runner& runner() const noexcept
-    {
-        return *runner_;
-    }
-    [[nodiscard]] model_cache& cache() const noexcept
-    {
-        return *cache_;
-    }
-
 private:
     service(std::shared_ptr<model_cache> cache, std::unique_ptr<job_runner> runner);
-
     std::shared_ptr<model_cache> cache_;
     std::unique_ptr<job_runner> runner_;
 };

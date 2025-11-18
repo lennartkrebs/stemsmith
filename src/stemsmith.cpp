@@ -15,6 +15,21 @@ service::service(std::shared_ptr<model_cache> cache, std::unique_ptr<job_runner>
 {
 }
 
+std::expected<job_handle, std::string> service::submit(job_request request) const
+{
+    if (!runner_)
+    {
+        return std::unexpected("Service is not initialized");
+    }
+
+    if (request.input_path.empty())
+    {
+        return std::unexpected("Input path must not be empty");
+    }
+
+    return runner_->submit(request.input_path, request.overrides, std::move(request.observer));
+}
+
 std::expected<std::unique_ptr<service>, std::string> service::create(job_config config,
                                                                      std::filesystem::path cache_root,
                                                                      std::filesystem::path output_root,
