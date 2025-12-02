@@ -11,6 +11,10 @@ namespace
 {
 std::filesystem::path job_output_directory(const std::filesystem::path& root, const job_descriptor& job)
 {
+    if (!job.output_dir.empty())
+    {
+        return job.output_dir;
+    }
     const auto stem = job.input_path.stem();
     return root / stem;
 }
@@ -102,6 +106,11 @@ std::expected<std::filesystem::path, std::string> separation_engine::process(con
     }
 
     return job_dir;
+}
+
+std::filesystem::path separation_engine::fallback_output_dir(const std::filesystem::path& input) const
+{
+    return output_root_ / input.stem();
 }
 
 } // namespace stemsmith

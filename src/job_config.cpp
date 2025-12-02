@@ -13,69 +13,6 @@
 
 namespace
 {
-std::string expand_env(const std::string& input)
-{
-    std::string output;
-    output.reserve(input.size());
-
-    for (std::size_t i = 0; i < input.size();)
-    {
-        if (input[i] != '$')
-        {
-            output.push_back(input[i]);
-            ++i;
-            continue;
-        }
-
-        if (i + 1 >= input.size())
-        {
-            output.push_back('$');
-            break;
-        }
-
-        std::string key;
-        std::size_t consumed = 0;
-
-        if (input[i + 1] == '{')
-        {
-            const auto end = input.find('}', i + 2);
-            if (end == std::string::npos)
-            {
-                output.push_back('$');
-                ++i;
-                continue;
-            }
-            key = input.substr(i + 2, end - (i + 2));
-            consumed = end - i + 1;
-        }
-        else
-        {
-            std::size_t j = i + 1;
-            while (j < input.size() &&
-                   (std::isalnum(static_cast<unsigned char>(input[j])) || input[j] == '_' || input[j] == '-'))
-            {
-                ++j;
-            }
-            key = input.substr(i + 1, j - (i + 1));
-            consumed = j - i;
-        }
-
-        if (const auto* value = std::getenv(key.c_str()); value != nullptr)
-        {
-            output.append(value);
-        }
-        else
-        {
-            output.append("$");
-            output.append(key);
-        }
-
-        i += consumed;
-    }
-
-    return output;
-}
-
 std::expected<std::vector<std::string>, std::string> parse_stems(const nlohmann::json& doc)
 {
     if (!doc.contains("stems"))
@@ -169,7 +106,7 @@ std::optional<model_profile> lookup_profile(std::string_view key)
     return std::nullopt;
 }
 
-std::expected<job_config, std::string> job_config::from_file(const std::filesystem::path& path)
+std::expected<job_template, std::string> job_template::from_file(const std::filesystem::path& path)
 {
     const auto doc_result = utils::load_json_file(path);
     if (!doc_result)
@@ -178,7 +115,7 @@ std::expected<job_config, std::string> job_config::from_file(const std::filesyst
     }
     const auto doc = std::move(doc_result).value();
 
-    job_config config;
+    job_template config;
 
     auto* active_profile = find_profile(config.profile);
     if (!active_profile)
@@ -223,21 +160,10 @@ std::expected<job_config, std::string> job_config::from_file(const std::filesyst
         config.stems_filter = std::move(stems);
     }
 
-    if (doc.contains("cache_root"))
-    {
-        if (!doc["cache_root"].is_string())
-        {
-            return std::unexpected("cache_root must be a string");
-        }
-
-        const auto expanded = expand_env(doc["cache_root"].get<std::string>());
-        config.cache_root = std::filesystem::path{expanded};
-    }
-
     return config;
 }
 
-std::vector<std::string> job_config::resolved_stems() const
+std::vector<std::string> job_template::resolved_stems() const
 {
     if (!stems_filter.empty())
     {

@@ -36,6 +36,12 @@ public:
         const job_descriptor& job,
         demucscpp::ProgressCallback progress_cb = {});
 
+    [[nodiscard]] const std::filesystem::path& output_root() const noexcept
+    {
+        return output_root_;
+    }
+    [[nodiscard]] std::filesystem::path fallback_output_dir(const std::filesystem::path& input) const;
+
 private:
     std::filesystem::path output_root_;
     model_session_pool model_session_pool_;

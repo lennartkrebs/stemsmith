@@ -7,8 +7,8 @@
 #include <string>
 #include <vector>
 
-#include "stemsmith/job_config.h"
 #include "json_utils.h"
+#include "stemsmith/job_config.h"
 
 namespace
 {

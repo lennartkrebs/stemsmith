@@ -6,8 +6,8 @@
 #include <system_error>
 #include <vector>
 
-#include "picosha2.h"
 #include "model_manifest.h"
+#include "picosha2.h"
 #include "stemsmith/weight_fetcher.h"
 
 namespace

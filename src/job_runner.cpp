@@ -73,18 +73,21 @@ void job_handle::set_observer(job_observer observer) const
 
 job_runner::job_runner(model_cache& cache,
                        std::filesystem::path output_root,
+                       job_template defaults,
                        std::size_t worker_count,
                        std::function<void(const job_descriptor&, const job_event&)> event_callback)
     : job_runner(separation_engine(cache, std::move(output_root)),
+                 std::move(defaults),
                  worker_count,
                  std::move(event_callback))
 {
 }
 
 job_runner::job_runner(separation_engine engine,
+                       job_template defaults,
                        std::size_t worker_count,
                        std::function<void(const job_descriptor&, const job_event&)> event_callback)
-    : catalog_(job_config{})
+    : catalog_(std::move(defaults))
     , engine_(std::move(engine))
     , event_callback_(std::move(event_callback))
     , pool_(
@@ -94,11 +97,27 @@ job_runner::job_runner(separation_engine engine,
 {
 }
 
-std::expected<job_handle, std::string> job_runner::submit(const std::filesystem::path& path,
-                                                          const job_overrides& overrides,
-                                                          job_observer observer)
+std::expected<job_handle, std::string> job_runner::submit(job_request request)
 {
-    auto add_result = catalog_.add_file(path, overrides);
+    if (request.input_path.empty())
+    {
+        return std::unexpected("Input path must not be empty");
+    }
+
+    if (request.output_subdir && request.output_subdir->is_absolute())
+    {
+        return std::unexpected("output_subdir must be relative");
+    }
+
+    job_overrides overrides;
+    overrides.profile = request.profile;
+    overrides.stems_filter = request.stems;
+
+    std::filesystem::path output_dir;
+    output_dir = request.output_subdir ? engine_.output_root() / *request.output_subdir
+                                       : engine_.fallback_output_dir(request.input_path);
+
+    auto add_result = catalog_.add_file(request.input_path, overrides, output_dir);
     if (!add_result)
     {
         return std::unexpected(add_result.error());
@@ -107,6 +126,7 @@ std::expected<job_handle, std::string> job_runner::submit(const std::filesystem:
     const auto& job = catalog_.jobs().at(add_result.value());
     const auto context = std::make_shared<job_context>();
     context->job = job;
+    context->output_dir = job.output_dir;
     auto shared_future = context->promise.get_future().share();
 
     {
@@ -133,7 +153,7 @@ std::expected<job_handle, std::string> job_runner::submit(const std::filesystem:
         std::lock_guard lock(mutex_);
         paths_by_id_[job_id] = job.input_path;
         context->job_id = job_id;
-        context->observer = std::move(observer);
+        context->observer = std::move(request.observer);
         context->handle_state = handle_state;
         if (const auto pending_it = pending_events_.find(job_id); pending_it != pending_events_.end())
         {
@@ -251,6 +271,7 @@ void job_runner::handle_event(const job_event& event)
         job_result result;
         result.input_path = input_path;
         result.status = event.status;
+        result.output_dir = context->output_dir.value_or(std::filesystem::path{});
         if (context->error)
         {
             result.error = context->error;

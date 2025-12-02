@@ -17,7 +17,7 @@ namespace
 {
 stemsmith::job_descriptor make_job(const std::string& path)
 {
-    return stemsmith::job_descriptor{std::filesystem::path{path}, stemsmith::job_config{}};
+    return stemsmith::job_descriptor{std::filesystem::path{path}, stemsmith::job_template{}, {}};
 }
 } // namespace
 

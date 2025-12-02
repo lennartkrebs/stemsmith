@@ -36,23 +36,19 @@ struct job_event
     std::optional<std::string> error{};
 };
 
-struct job_overrides
-{
-    std::optional<model_profile_id> profile{};
-    std::optional<std::vector<std::string>> stems_filter{};
-};
-
 struct job_descriptor
 {
     std::filesystem::path input_path;
-    job_config config;
+    job_template config;
+    std::filesystem::path output_dir;
 };
-
 
 struct job_request
 {
     std::filesystem::path input_path;
-    job_overrides overrides{};
+    std::optional<model_profile_id> profile{};
+    std::optional<std::vector<std::string>> stems{};
+    std::optional<std::filesystem::path> output_subdir{};
     job_observer observer{};
 };
 
@@ -68,6 +64,21 @@ struct model_handle
 using weight_progress_callback =
     std::function<void(model_profile_id profile, std::size_t bytes_downloaded, std::size_t total_bytes)>;
 
+struct runtime_config
+{
+    struct cache_config
+    {
+        std::filesystem::path root;
+        std::shared_ptr<weight_fetcher> fetcher{};
+        weight_progress_callback on_progress{};
+    };
+
+    cache_config cache{};
+    std::filesystem::path output_root;
+    std::size_t worker_count{std::thread::hardware_concurrency()};
+    std::function<void(const job_descriptor&, const job_event&)> on_job_event{};
+};
+
 /**
  * @brief High-level service for submitting and managing separation jobs.
  *
@@ -80,17 +91,13 @@ class service
 public:
     using event_callback = std::function<void(const job_descriptor&, const job_event&)>;
 
-    static std::expected<std::unique_ptr<service>, std::string> create(
-        std::filesystem::path cache_root,
-        std::filesystem::path output_root,
-        std::shared_ptr<weight_fetcher> fetcher = {},
-        std::size_t worker_count = std::thread::hardware_concurrency(),
-        event_callback callback = {},
-        weight_progress_callback weight_callback = {});
+    static std::expected<std::unique_ptr<service>, std::string> create(runtime_config runtime,
+                                                                       job_template defaults = {});
 
     [[nodiscard]] std::expected<job_handle, std::string> submit(job_request request) const;
     [[nodiscard]] std::expected<model_handle, std::string> ensure_model_ready(model_profile_id profile) const;
-    [[nodiscard]] std::expected<void, std::string> purge_models(std::optional<model_profile_id> profile = std::nullopt) const;
+    [[nodiscard]] std::expected<void, std::string> purge_models(
+        std::optional<model_profile_id> profile = std::nullopt) const;
 
     service(const service&) = delete;
     service& operator=(const service&) = delete;

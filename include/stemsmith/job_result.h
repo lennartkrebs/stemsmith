@@ -8,18 +8,17 @@
  */
 #pragma once
 
+#include <expected>
 #include <filesystem>
 #include <functional>
 #include <future>
 #include <memory>
 #include <optional>
 #include <string>
-#include <expected>
-
-#include "stemsmith/job_config.h"
 
 namespace stemsmith
 {
+
 enum class job_status
 {
     queued,
@@ -28,6 +27,7 @@ enum class job_status
     failed,
     cancelled
 };
+
 struct job_descriptor;
 struct job_event;
 

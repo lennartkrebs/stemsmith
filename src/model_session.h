@@ -9,10 +9,10 @@
 #include <utility>
 #include <vector>
 
-#include "model.hpp"
 #include "audio_buffer.h"
-#include "stemsmith/job_config.h"
+#include "model.hpp"
 #include "model_cache.h"
+#include "stemsmith/job_config.h"
 
 namespace stemsmith
 {

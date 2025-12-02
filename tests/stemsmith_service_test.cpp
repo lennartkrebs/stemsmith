@@ -23,7 +23,14 @@ TEST(stemsmith_service_test, creates_runner_with_cache)
         EXPECT_GE(total, downloaded);
     };
 
-    auto service_result = service::create(cache_root, output_root, fetcher, 1, {}, weight_callback);
+    runtime_config runtime;
+    runtime.cache.root = cache_root;
+    runtime.cache.fetcher = fetcher;
+    runtime.cache.on_progress = weight_callback;
+    runtime.output_root = output_root;
+    runtime.worker_count = 1;
+
+    auto service_result = service::create(std::move(runtime));
     ASSERT_TRUE(service_result.has_value());
     auto svc = std::move(service_result.value());
     ASSERT_NE(svc, nullptr);
@@ -36,7 +43,7 @@ TEST(stemsmith_service_test, creates_runner_with_cache)
 
     job_request request;
     request.input_path = output_root / "missing.wav";
-    const auto service_submit = svc->submit(std::move(request));
+    const auto service_submit = svc->submit(request);
     EXPECT_FALSE(service_submit.has_value());
 
     const auto ensure = svc->ensure_model_ready(model_profile_id::balanced_four_stem);

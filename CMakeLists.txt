@@ -142,10 +142,10 @@ add_test(NAME stemsmith-test COMMAND ${PROJECT_NAME}_test)
 
 option(STEMSMITH_BUILD_EXAMPLES "Build Stemsmith examples" ON)
 if (STEMSMITH_BUILD_EXAMPLES)
-    add_executable(stemsmith_progress_example examples/progress_example.cpp)
-    target_link_libraries(stemsmith_progress_example PRIVATE ${PROJECT_NAME})
-    target_include_directories(stemsmith_progress_example PRIVATE
+    add_executable(simple_separation_example examples/simple_separation.cpp)
+    target_link_libraries(simple_separation_example PRIVATE ${PROJECT_NAME})
+    target_include_directories(simple_separation_example PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/examples)
-    target_compile_definitions(stemsmith_progress_example PRIVATE STEMSMITH_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+    target_compile_definitions(simple_separation_example PRIVATE STEMSMITH_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 endif ()

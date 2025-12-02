@@ -3,6 +3,8 @@
 #include <system_error>
 #include <utility>
 
+namespace stemsmith
+{
 namespace
 {
 bool stem_supported(const std::string& stem, const stemsmith::model_profile& profile)
@@ -18,9 +20,8 @@ bool stem_supported(const std::string& stem, const stemsmith::model_profile& pro
 }
 } // namespace
 
-namespace stemsmith
-{
-job_catalog::job_catalog(job_config base_config, exists_function exists_provider) : base_config_(std::move(base_config))
+job_catalog::job_catalog(job_template base_config, exists_function exists_provider)
+    : base_config_(std::move(base_config))
 {
     if (exists_provider)
     {
@@ -37,7 +38,8 @@ job_catalog::job_catalog(job_config base_config, exists_function exists_provider
 }
 
 std::expected<std::size_t, std::string> job_catalog::add_file(const std::filesystem::path& path,
-                                                              const job_overrides& overrides)
+                                                              const job_overrides& overrides,
+                                                              std::filesystem::path output_dir)
 {
     if (path.empty())
     {
@@ -63,7 +65,7 @@ std::expected<std::size_t, std::string> job_catalog::add_file(const std::filesys
     }
 
     auto config = std::move(config_result).value();
-    jobs_.push_back({normalized, std::move(config)});
+    jobs_.push_back({normalized, std::move(config), output_dir.lexically_normal()});
     seen_paths_.insert(normalized);
     return jobs_.size() - 1;
 }
@@ -77,9 +79,9 @@ std::filesystem::path job_catalog::normalize(const std::filesystem::path& path)
     return path.lexically_normal();
 }
 
-std::expected<job_config, std::string> job_catalog::apply_overrides(const job_overrides& overrides) const
+std::expected<job_template, std::string> job_catalog::apply_overrides(const job_overrides& overrides) const
 {
-    job_config config = base_config_;
+    job_template config = base_config_;
 
     if (overrides.profile)
     {

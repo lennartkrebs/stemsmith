@@ -1,11 +1,10 @@
-#include "stemsmith/stemsmith.h"
-
 #include <memory>
 #include <system_error>
 
 #include "http_weight_fetcher.h"
 #include "job_runner.h"
 #include "model_cache.h"
+#include "stemsmith/stemsmith.h"
 
 namespace stemsmith
 {
@@ -25,12 +24,7 @@ std::expected<job_handle, std::string> service::submit(job_request request) cons
         return std::unexpected("Service is not initialized");
     }
 
-    if (request.input_path.empty())
-    {
-        return std::unexpected("Input path must not be empty");
-    }
-
-    return runner_->submit(request.input_path, request.overrides, std::move(request.observer));
+    return runner_->submit(std::move(request));
 }
 
 std::expected<void, std::string> service::purge_models(std::optional<model_profile_id> profile) const
@@ -57,39 +51,37 @@ std::expected<model_handle, std::string> service::ensure_model_ready(model_profi
     return cache_->ensure_ready(profile);
 }
 
-std::expected<std::unique_ptr<service>, std::string> service::create(std::filesystem::path cache_root,
-                                                                     std::filesystem::path output_root,
-                                                                     std::shared_ptr<weight_fetcher> fetcher,
-                                                                     std::size_t worker_count,
-                                                                     event_callback callback,
-                                                                     weight_progress_callback weight_callback)
+std::expected<std::unique_ptr<service>, std::string> service::create(runtime_config runtime, job_template defaults)
 {
-    if (!fetcher)
+    if (runtime.cache.root.empty())
     {
-        // Default to HTTP fetcher
-        fetcher = std::make_shared<http_weight_fetcher>();
+        return std::unexpected("cache_root is required");
+    }
+    if (runtime.output_root.empty())
+    {
+        return std::unexpected("output_root is required");
+    }
+
+    if (!runtime.cache.fetcher)
+    {
+        runtime.cache.fetcher = std::make_shared<http_weight_fetcher>();
     }
 
     std::error_code ec;
-    if (!cache_root.empty())
+    std::filesystem::create_directories(runtime.cache.root, ec);
+    if (ec)
     {
-        std::filesystem::create_directories(cache_root, ec);
-        if (ec)
-        {
-            return std::unexpected("Failed to create cache root: " + ec.message());
-        }
+        return std::unexpected("Failed to create cache root: " + ec.message());
     }
 
-    if (!output_root.empty())
+    std::filesystem::create_directories(runtime.output_root, ec);
+    if (ec)
     {
-        std::filesystem::create_directories(output_root, ec);
-        if (ec)
-        {
-            return std::unexpected("Failed to create output root: " + ec.message());
-        }
+        return std::unexpected("Failed to create output root: " + ec.message());
     }
 
-    auto cache_result = model_cache::create(std::move(cache_root), std::move(fetcher), std::move(weight_callback));
+    auto cache_result =
+        model_cache::create(runtime.cache.root, runtime.cache.fetcher, std::move(runtime.cache.on_progress));
     if (!cache_result)
     {
         return std::unexpected(cache_result.error());
@@ -97,9 +89,10 @@ std::expected<std::unique_ptr<service>, std::string> service::create(std::filesy
     auto cache_ptr = std::make_shared<model_cache>(std::move(cache_result.value()));
 
     auto runner = std::make_unique<job_runner>(*cache_ptr,
-                                               std::move(output_root),
-                                               worker_count,
-                                               std::move(callback));
+                                               runtime.output_root,
+                                               defaults,
+                                               runtime.worker_count,
+                                               std::move(runtime.on_job_event));
 
     return std::unique_ptr<service>(new service(std::move(cache_ptr), std::move(runner)));
 }

@@ -1,5 +1,4 @@
 {
   "model": "balanced-six-stem",
-  "stems": ["vocals", "guitar"],
-  "cache_root": "${STEMSMITH_CACHE}/models"
+  "stems": ["vocals", "guitar"]
 }

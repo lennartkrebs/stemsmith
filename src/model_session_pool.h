@@ -7,9 +7,9 @@
 #include <mutex>
 #include <vector>
 
-#include "stemsmith/job_config.h"
 #include "model_cache.h"
 #include "model_session.h"
+#include "stemsmith/job_config.h"
 
 namespace stemsmith
 {
