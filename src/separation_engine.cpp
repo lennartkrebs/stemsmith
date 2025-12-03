@@ -49,6 +49,7 @@ std::expected<std::filesystem::path, std::string> separation_engine::process(con
     {
         return std::unexpected("No audio loader configured");
     }
+
     if (!writer_)
     {
         return std::unexpected("No audio writer configured");

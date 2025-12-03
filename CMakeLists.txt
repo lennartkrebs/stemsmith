@@ -148,4 +148,11 @@ if (STEMSMITH_BUILD_EXAMPLES)
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/examples)
     target_compile_definitions(simple_separation_example PRIVATE STEMSMITH_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+
+    add_executable(observer_separation_example examples/observer_separation.cpp)
+    target_link_libraries(observer_separation_example PRIVATE ${PROJECT_NAME})
+    target_include_directories(observer_separation_example PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/examples)
+    target_compile_definitions(observer_separation_example PRIVATE STEMSMITH_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 endif ()

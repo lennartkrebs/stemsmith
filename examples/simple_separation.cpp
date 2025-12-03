@@ -1,4 +1,3 @@
-#include <cassert>
 #include <filesystem>
 #include <format>
 #include <iostream>
@@ -39,17 +38,11 @@ int main()
 {
     using namespace stemsmith;
 
-    // Wipe directories for a clean run
-    std::error_code ec;
-    std::filesystem::remove_all(kModelCacheRoot, ec);
-    assert(!ec);
-    std::filesystem::remove_all(kOutputDir, ec);
-    assert(!ec);
-
     // Create the Stemsmith service
     runtime_config runtime;
     runtime.cache.root = kModelCacheRoot;
     runtime.output_root = kOutputDir;
+
     runtime.on_job_event = [](const job_descriptor& job, const job_event& evt)
     {
         const auto name = job.input_path.filename().string();
@@ -75,7 +68,8 @@ int main()
     request.input_path = kExampleTrackDir;
 #endif
 
-    request.stems = {"drums", "bass", "vocals"}; // Separate only drums, bass, and vocals
+    request.stems = {"drums", "bass", "vocals"};            // Separate only drums, bass, and vocals
+    request.profile = model_profile_id::balanced_four_stem; // Use the 4-stem model profile
 
     const auto submit = stemsmith_service->submit(request);
     if (!submit)
