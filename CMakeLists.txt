@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 set(PROJECT_NAME stemsmith)
 project(stemsmith LANGUAGES CXX)
 
+find_package(PkgConfig QUIET)
 find_package(CURL REQUIRED)
 
 if (CMAKE_VERSION VERSION_GREATER_EQUAL "4.0")
@@ -11,6 +12,20 @@ endif ()
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+option(STEMSMITH_ENABLE_COVERAGE "Build Stemsmith with coverage instrumentation" OFF)
+set(STEMSMITH_COVERAGE_FLAGS "")
+set(STEMSMITH_COVERAGE_LINK_FLAGS "")
+if (STEMSMITH_ENABLE_COVERAGE)
+    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        # Keep optimizations off so coverage can map lines correctly.
+        message(STATUS "Building with coverage instrumentation")
+        set(STEMSMITH_COVERAGE_FLAGS -O0 -g --coverage)
+        set(STEMSMITH_COVERAGE_LINK_FLAGS --coverage)
+    else ()
+        message(WARNING "Coverage enabled, but compiler ${CMAKE_CXX_COMPILER_ID} is unsupported for coverage flags.")
+    endif ()
+endif ()
 
 include(FetchContent)
 FetchContent_Declare(
@@ -75,6 +90,13 @@ target_compile_definitions(${PROJECT_NAME}
         STEMSMITH_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data"
 )
 
+if (STEMSMITH_COVERAGE_FLAGS)
+    target_compile_options(${PROJECT_NAME} PRIVATE ${STEMSMITH_COVERAGE_FLAGS})
+    if (STEMSMITH_COVERAGE_LINK_FLAGS)
+        target_link_options(${PROJECT_NAME} PRIVATE ${STEMSMITH_COVERAGE_LINK_FLAGS})
+    endif ()
+endif ()
+
 target_link_libraries(${PROJECT_NAME}
         PUBLIC
         demucs.cpp.lib
@@ -138,7 +160,14 @@ target_compile_definitions(${PROJECT_NAME}_test
         STEMSMITH_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures"
 )
 
-add_test(NAME stemsmith-test COMMAND ${PROJECT_NAME}_test)
+if (STEMSMITH_COVERAGE_FLAGS)
+    target_compile_options(${PROJECT_NAME}_test PRIVATE ${STEMSMITH_COVERAGE_FLAGS})
+    if (STEMSMITH_COVERAGE_LINK_FLAGS)
+        target_link_options(${PROJECT_NAME}_test PRIVATE ${STEMSMITH_COVERAGE_LINK_FLAGS})
+    endif ()
+endif ()
+
+add_test(NAME stemsmith_test COMMAND ${PROJECT_NAME}_test)
 
 option(STEMSMITH_BUILD_EXAMPLES "Build Stemsmith examples" ON)
 if (STEMSMITH_BUILD_EXAMPLES)

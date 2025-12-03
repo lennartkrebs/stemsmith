@@ -269,7 +269,7 @@ std::expected<bool, std::string> model_cache::verify_checksum(const std::filesys
         return std::unexpected("Unable to open weights for checksum: " + path.string());
     }
 
-    const std::vector<unsigned char> buffer(std::istreambuf_iterator(input), {});
+    const std::vector<unsigned char> buffer(std::istreambuf_iterator<char>(input), {});
     const auto hash = picosha2::hash256_hex_string(buffer);
     return hash == entry.sha256;
 }

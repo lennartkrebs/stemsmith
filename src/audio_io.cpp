@@ -45,16 +45,14 @@ std::expected<std::vector<float>, std::string> ensure_supported_channels(const n
 }
 
 std::expected<std::vector<float>, std::string> resample_if_needed(const std::vector<float>& samples,
-                                                                  std::size_t channels,
-                                                                  int source_rate,
-                                                                  int target_rate)
+                                                                  int source_rate)
 {
-    if (source_rate == target_rate || samples.empty())
+    if (source_rate == TARGET_SAMPLE_RATE || samples.empty())
     {
         return samples;
     }
 
-    if (source_rate <= 0 || target_rate <= 0)
+    if (source_rate <= 0)
     {
         return std::unexpected("Invalid sample rate");
     }
@@ -62,11 +60,11 @@ std::expected<std::vector<float>, std::string> resample_if_needed(const std::vec
     SRC_DATA request{};
     request.data_in = samples.data();
 
-    const auto input_frames = samples.size() / channels;
-    const double ratio = static_cast<double>(target_rate) / static_cast<double>(source_rate);
+    const auto input_frames = samples.size() / TARGET_NUM_CHANNELS;
+    const double ratio = static_cast<double>(TARGET_SAMPLE_RATE) / static_cast<double>(source_rate);
     const auto max_output_frames = static_cast<std::size_t>(std::ceil(input_frames * ratio)) + 8;
 
-    std::vector<float> output(max_output_frames * channels);
+    std::vector<float> output(max_output_frames * TARGET_NUM_CHANNELS);
 
     request.data_out = output.data();
     request.src_ratio = ratio;
@@ -74,12 +72,12 @@ std::expected<std::vector<float>, std::string> resample_if_needed(const std::vec
     request.output_frames = static_cast<long>(max_output_frames);
     request.end_of_input = 1;
 
-    if (const int result = src_simple(&request, SRC_SINC_BEST_QUALITY, static_cast<int>(channels)); result != 0)
+    if (const int result = src_simple(&request, SRC_SINC_BEST_QUALITY, TARGET_NUM_CHANNELS); result != 0)
     {
         return std::unexpected(src_strerror(result));
     }
 
-    output.resize(static_cast<std::size_t>(request.output_frames_gen) * channels);
+    output.resize(static_cast<std::size_t>(request.output_frames_gen) * TARGET_NUM_CHANNELS);
     return output;
 }
 } // namespace
@@ -114,7 +112,7 @@ std::expected<audio_buffer, std::string> load_audio_file(const std::filesystem::
         return std::unexpected(samples.error());
     }
 
-    const auto resampled = resample_if_needed(*samples, TARGET_NUM_CHANNELS, file_data->sampleRate, TARGET_SAMPLE_RATE);
+    const auto resampled = resample_if_needed(*samples, file_data->sampleRate);
     if (!resampled)
     {
         return std::unexpected(resampled.error());

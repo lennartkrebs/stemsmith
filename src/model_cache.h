@@ -8,7 +8,6 @@
 #include <mutex>
 #include <string>
 
-#include "job_catalog.h"
 #include "model_manifest.h"
 #include "stemsmith/service.h"
 

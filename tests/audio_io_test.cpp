@@ -106,4 +106,47 @@ TEST(audio_io_test, write_audio_file_fails_with_tiny_buffer)
     ASSERT_FALSE(status.has_value());
     EXPECT_NE(status.error().find("Failed to write audio"), std::string::npos);
 }
+
+TEST(audio_io_test, load_audio_file_fails_with_missing_file)
+{
+    const auto buffer = load_audio_file("nonexistent_file.wav");
+    ASSERT_FALSE(buffer.has_value());
+    EXPECT_NE(buffer.error().find("does not exist"), std::string::npos);
+}
+
+TEST(audio_io_test, load_audio_file_supports_stereo_without_resample)
+{
+    const temp_dir dir;
+    const auto wav_path = write_fixture_wav(dir, 44100, 2, 480);
+
+    const auto buffer = load_audio_file(wav_path);
+    ASSERT_TRUE(buffer.has_value());
+    EXPECT_EQ(buffer->sample_rate, 44100);
+    EXPECT_EQ(buffer->channels, 2U);
+    EXPECT_EQ(buffer->frame_count(), 480U);
+    EXPECT_EQ(buffer->samples.size(), 960U);
+}
+
+TEST(audio_io_test, load_audio_file_rejects_multichannel_inputs)
+{
+    const temp_dir dir;
+    const auto wav_path = write_fixture_wav(dir, 44100, 3, 480);
+
+    const auto buffer = load_audio_file(wav_path);
+    ASSERT_FALSE(buffer.has_value());
+    EXPECT_NE(buffer.error().find("Only mono or stereo"), std::string::npos);
+}
+
+TEST(audio_io_test, audio_buffer)
+{
+    audio_buffer buffer;
+    EXPECT_TRUE(buffer.empty());
+    EXPECT_EQ(buffer.frame_count(), 0U);
+
+    buffer.channels = 2;
+    buffer.samples = {0.0f, 0.0f, 1.0f, 1.0f};
+    EXPECT_FALSE(buffer.empty());
+    EXPECT_EQ(buffer.frame_count(), 2U);
+}
+
 } // namespace stemsmith
