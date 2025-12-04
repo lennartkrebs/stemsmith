@@ -1,0 +1,79 @@
+#pragma once
+
+#include <atomic>
+#include <exception>
+#include <filesystem>
+#include <mutex>
+#include <optional>
+#include <string>
+#include <thread>
+#include <unordered_map>
+
+#include <crow/include/crow_all.h>
+
+#include "stemsmith/job_result.h"
+#include "stemsmith/service.h"
+
+namespace stemsmith::http
+{
+
+struct config
+{
+    std::string bind_address{"0.0.0.0"};
+    std::uint16_t port{8345};
+    std::filesystem::path cache_root{};
+    std::filesystem::path output_root{};
+    std::size_t worker_count{std::thread::hardware_concurrency()};
+};
+
+struct job_state
+{
+    job_handle handle;
+    job_event last_event{};
+    std::filesystem::path output_dir{};
+};
+
+class job_registry
+{
+public:
+    [[nodiscard]] std::string next_id();
+    void add(const std::string& id, job_handle handle);
+    void update(const std::string& id, const job_descriptor& desc, const job_event& ev);
+
+    [[nodiscard]] std::optional<job_state> get(const std::string& id) const;
+
+private:
+    mutable std::mutex mutex_;
+    std::unordered_map<std::string, job_state> jobs_;
+    std::atomic<std::uint64_t> next_id_{1};
+};
+
+class server
+{
+public:
+    explicit server(const config& cfg);
+    ~server();
+
+    server(const server&) = delete;
+    server& operator=(const server&) = delete;
+    server(server&&) = delete;
+    server& operator=(server&&) = delete;
+
+    void start();
+    void stop();
+
+private:
+    void run();
+    void register_routes();
+    crow::response handle_post_job(const crow::request& req);
+    crow::response handle_get_job(const std::string& id) const;
+
+    config config_{};
+    std::unique_ptr<service> svc_;
+    job_registry registry_;
+    crow::SimpleApp app_;
+    std::thread thread_;
+    std::atomic<bool> running_{false};
+};
+
+} // namespace stemsmith::http

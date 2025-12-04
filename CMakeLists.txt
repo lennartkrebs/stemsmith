@@ -51,15 +51,26 @@ file(GLOB SOURCES "${STEMSMITH_ROOT}/src/*.cpp")
 add_library(${PROJECT_NAME} ${SOURCES})
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
+add_library(stemsmith_http
+    src/http/server.cpp
+)
+
 target_include_directories(${PROJECT_NAME}
     PUBLIC
         ${STEMSMITH_INCLUDE_DIR}
         ${STEMSMITH_THIRDPARTY_DIR}
-        ${asio_SOURCE_DIR}/asio/include
         ${STEMSMITH_ROOT}/external/demucs.cpp/src
         ${STEMSMITH_ROOT}/external/demucs.cpp/vendor/libnyquist/include
     PRIVATE
         ${STEMSMITH_ROOT}/src
+)
+
+target_include_directories(stemsmith_http
+    PUBLIC
+        ${STEMSMITH_ROOT}/src
+        ${STEMSMITH_THIRDPARTY_DIR}
+        ${asio_SOURCE_DIR}/asio/include
+        ${STEMSMITH_INCLUDE_DIR}
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -118,6 +129,7 @@ add_executable(${PROJECT_NAME}_test ${TEST_SOURCES})
 target_link_libraries(${PROJECT_NAME}_test
     PRIVATE
         ${PROJECT_NAME}
+        stemsmith_http
         GTest::gtest
 )
 
