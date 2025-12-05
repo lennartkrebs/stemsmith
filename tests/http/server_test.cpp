@@ -164,6 +164,7 @@ TEST(http_server_test, post_jobs_rejects_missing_file)
 
     const auto resp = stemsmith::http::server_test_hook::post_job(srv, req);
     EXPECT_EQ(resp.code, crow::status::BAD_REQUEST);
+    EXPECT_NE(resp.body.find(R"({"error":"file field required"})"), std::string::npos);
 }
 
 TEST(http_server_test, post_jobs_rejects_non_wav)
@@ -186,6 +187,102 @@ TEST(http_server_test, post_jobs_rejects_non_wav)
 
     const auto resp = stemsmith::http::server_test_hook::post_job(srv, req);
     EXPECT_EQ(resp.code, crow::status::BAD_REQUEST);
+    EXPECT_NE(resp.body.find(R"({"error":"WAV input required"})"), std::string::npos);
+}
+
+TEST(http_server_test, post_jobs_rejects_bad_config_json)
+{
+    stemsmith::http::config cfg;
+    stemsmith::http::server srv(cfg);
+    stemsmith::http::server_test_hook::set_submit_override(
+        srv, [](stemsmith::job_request) { return stemsmith::job_handle{}; });
+
+    const std::string file_body = "RIFF....WAVE"; // minimal marker content
+    std::string body;
+    body += "--BOUNDARY\r\n";
+    body += "Content-Disposition: form-data; name=\"file\"; filename=\"file.wav\"\r\n";
+    body += "Content-Type: audio/wav\r\n\r\n";
+    body += file_body;
+    body += "\r\n";
+    body += "--BOUNDARY\r\n";
+    body += "Content-Disposition: form-data; name=\"config\"; filename=\"config.json\"\r\n";
+    body += "Content-Type: application/json\r\n\r\n";
+    body += "not-json";
+    body += "\r\n--BOUNDARY--\r\n";
+
+    crow::request req;
+    req.body = body;
+    req.add_header("Content-Type", "multipart/form-data; boundary=BOUNDARY");
+
+    const auto resp = stemsmith::http::server_test_hook::post_job(srv, req);
+    EXPECT_EQ(resp.code, crow::status::BAD_REQUEST);
+}
+
+TEST(http_server_test, post_jobs_rejects_large_file)
+{
+    stemsmith::http::config cfg;
+    stemsmith::http::server srv(cfg);
+    stemsmith::http::server_test_hook::set_submit_override(
+        srv, [](stemsmith::job_request) { return stemsmith::job_handle{}; });
+
+    constexpr std::size_t too_big = 100 * 1024 * 1024 + 1;
+    std::string file_body(too_big, 'x');
+
+    std::string body;
+    body.reserve(file_body.size() + 256);
+    body += "--BOUNDARY\r\n";
+    body += "Content-Disposition: form-data; name=\"file\"; filename=\"file.wav\"\r\n";
+    body += "Content-Type: audio/wav\r\n\r\n";
+    body += file_body;
+    body += "\r\n--BOUNDARY--\r\n";
+
+    crow::request req;
+    req.body = std::move(body);
+    req.add_header("Content-Type", "multipart/form-data; boundary=BOUNDARY");
+
+    const auto resp = stemsmith::http::server_test_hook::post_job(srv, req);
+    EXPECT_EQ(resp.code, crow::status::PAYLOAD_TOO_LARGE);
+}
+
+TEST(http_server_test, post_jobs_accepts_valid_wav_and_config)
+{
+    stemsmith::http::config cfg;
+    stemsmith::http::server srv(cfg);
+
+    bool submit_called = false;
+    stemsmith::http::server_test_hook::set_submit_override(
+        srv,
+        [&](const stemsmith::job_request& req) -> std::expected<stemsmith::job_handle, std::string> {
+            submit_called = true;
+            EXPECT_TRUE(req.profile.has_value());
+            EXPECT_TRUE(req.stems.has_value());
+            EXPECT_EQ(req.stems->size(), 1u);
+            EXPECT_EQ(req.stems->front(), "vocals");
+            return stemsmith::job_handle{};
+        });
+
+    const std::string file_body = "RIFF....WAVE";
+    const std::string config_json = R"({"model":"balanced-six-stem","stems":["vocals"]})";
+
+    std::string body;
+    body += "--BOUNDARY\r\n";
+    body += "Content-Disposition: form-data; name=\"file\"; filename=\"file.wav\"\r\n";
+    body += "Content-Type: audio/wav\r\n\r\n";
+    body += file_body;
+    body += "\r\n";
+    body += "--BOUNDARY\r\n";
+    body += "Content-Disposition: form-data; name=\"config\"; filename=\"config.json\"\r\n";
+    body += "Content-Type: application/json\r\n\r\n";
+    body += config_json;
+    body += "\r\n--BOUNDARY--\r\n";
+
+    crow::request req;
+    req.body = body;
+    req.add_header("Content-Type", "multipart/form-data; boundary=BOUNDARY");
+
+    const auto resp = stemsmith::http::server_test_hook::post_job(srv, req);
+    EXPECT_EQ(resp.code, crow::status::ACCEPTED);
+    EXPECT_TRUE(submit_called);
 }
 
 TEST(http_server_test, service_unavailable_when_no_service)
