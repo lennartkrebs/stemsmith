@@ -46,6 +46,7 @@ struct job_template
     std::vector<std::string> stems_filter{}; // optional subset, empty -> all
 
     [[nodiscard]] std::vector<std::string> resolved_stems() const;
+    static std::expected<job_template, std::string> from_json_string(const std::string& text);
     static std::expected<job_template, std::string> from_file(const std::filesystem::path& path);
 };
 

@@ -5,6 +5,8 @@
 #include <fstream>
 #include <optional>
 #include <vector>
+#include <cstring>
+#include <nlohmann/json.hpp>
 
 namespace stemsmith::http
 {
@@ -166,6 +168,57 @@ crow::response server::handle_post_job(const crow::request& req)
         return crow::response{crow::status::BAD_REQUEST, R"({"error":"WAV input required"})"};
     }
 
+    if (const auto& content_type_part = crow::multipart::get_header_object(headers, "Content-Type").value; !content_type_part.empty())
+    {
+        std::string lowered = content_type_part;
+        std::ranges::transform(lowered, lowered.begin(), [](unsigned char c) { return std::tolower(c); });
+        if (lowered.find("audio/wav") == std::string::npos && lowered.find("audio/x-wav") == std::string::npos)
+        {
+            return crow::response{crow::status::BAD_REQUEST, R"({"error":"WAV content-type required"})"};
+        }
+    }
+
+    if (constexpr std::size_t kMaxUploadBytes = 100 * 1024 * 1024; header_body.size() > kMaxUploadBytes)
+    {
+        return crow::response{crow::status::PAYLOAD_TOO_LARGE, R"({"error":"file too large"})"};
+    }
+
+    job_template template_config{};
+    std::optional<std::filesystem::path> output_subdir_override{};
+    if (const auto cfg_it = msg.part_map.find("config"); cfg_it != msg.part_map.end())
+    {
+        const auto cfg_result = job_template::from_json_string(cfg_it->second.body);
+        if (!cfg_result)
+        {
+            crow::json::wvalue body;
+            body["error"] = cfg_result.error();
+            return crow::response{crow::status::BAD_REQUEST, body};
+        }
+
+        template_config = cfg_result.value();
+
+        // Optional: allow output_subdir in config JSON.
+        try
+        {
+            if (const auto json = nlohmann::json::parse(cfg_it->second.body); json.contains("output_subdir"))
+            {
+                if (!json["output_subdir"].is_string())
+                {
+                    crow::json::wvalue body;
+                    body["error"] = "output_subdir must be a string";
+                    return crow::response{crow::status::BAD_REQUEST, body};
+                }
+                output_subdir_override = std::filesystem::path(json["output_subdir"].get<std::string>());
+            }
+        }
+        catch (const std::exception& ex)
+        {
+            crow::json::wvalue body;
+            body["error"] = std::string{"Invalid config JSON: "} + ex.what();
+            return crow::response{crow::status::BAD_REQUEST, body};
+        }
+    }
+
     const auto job_id = registry_.next_id();
     const auto uploads_root =
         config_.output_root.empty() ? std::filesystem::path("build/uploads") : config_.output_root / "uploads";
@@ -184,10 +237,24 @@ crow::response server::handle_post_job(const crow::request& req)
         return crow::response{crow::status::INTERNAL_SERVER_ERROR, R"({"error":"failed to save upload"})"};
     }
 
+    // Prepare the job request
     job_request job{};
     job.input_path = target_path;
-    job.observer.callback = [this, job_id](const job_descriptor& desc, const job_event& ev)
-    { registry_.update(job_id, desc, ev); };
+    job.profile = template_config.profile;
+
+    if (!template_config.stems_filter.empty())
+    {
+        job.stems = template_config.stems_filter;
+    }
+
+    if (output_subdir_override)
+    {
+        job.output_subdir = *output_subdir_override;
+    }
+
+    job.observer.callback = [this, job_id](const job_descriptor& desc, const job_event& ev) {
+        registry_.update(job_id, desc, ev);
+    };
 
     const auto handle = svc_->submit(std::move(job));
     if (!handle)
