@@ -1,3 +1,7 @@
+#include "http/server.h"
+#include "mock_service.h"
+
+#include <asio.hpp>
 #include <chrono>
 #include <cstddef>
 #include <curl/curl.h>
@@ -5,8 +9,6 @@
 #include <optional>
 #include <string>
 #include <thread>
-
-#include "http/server.h"
 
 namespace
 {
@@ -71,8 +73,24 @@ public:
         curl_global_cleanup();
     }
 };
-
 } // namespace
+
+namespace stemsmith::http
+{
+class server_test_hook
+{
+public:
+    static crow::response post_job(server& srv, const crow::request& req)
+    {
+        return srv.handle_post_job(req);
+    }
+
+    static void set_submit_override(server& srv, std::function<std::expected<job_handle, std::string>(job_request)> func)
+    {
+        srv.submit_override_ = std::move(func);
+    }
+};
+} // namespace stemsmith::http
 
 TEST(http_server_test, health_endpoint_returns_ok)
 {
@@ -133,4 +151,62 @@ TEST(http_server_test, root_endpoint_returns_message)
     ASSERT_TRUE(resp.has_value()) << "Server did not respond to /";
     EXPECT_EQ(resp->status, 200);
     EXPECT_NE(resp->body.find("\"message\":\"Welcome to the StemSmith Job Server\""), std::string::npos);
+}
+
+TEST(http_server_test, post_jobs_rejects_missing_file)
+{
+    stemsmith::http::config cfg;
+    stemsmith::http::server srv(cfg);
+    stemsmith::http::server_test_hook::set_submit_override(srv, [](stemsmith::job_request) { return std::unexpected<std::string>(""); });
+
+    const std::string body = "--BOUNDARY--\r\n";
+    crow::request req;
+    req.body = body;
+    req.add_header("Content-Type", "multipart/form-data; boundary=BOUNDARY");
+
+    const auto resp = stemsmith::http::server_test_hook::post_job(srv, req);
+    EXPECT_EQ(resp.code, crow::status::BAD_REQUEST);
+}
+
+TEST(http_server_test, post_jobs_rejects_non_wav)
+{
+    stemsmith::http::config cfg;
+    stemsmith::http::server srv(cfg);
+    stemsmith::http::server_test_hook::set_submit_override(srv, [](stemsmith::job_request) { return std::unexpected<std::string>(""); });
+
+    const std::string part_body = "abc";
+    std::string body;
+    body += "--BOUNDARY\r\n";
+    body += "Content-Disposition: form-data; name=\"file\"; filename=\"file.mp3\"\r\n";
+    body += "Content-Type: audio/mpeg\r\n\r\n";
+    body += part_body;
+    body += "\r\n--BOUNDARY--\r\n";
+
+    crow::request req;
+    req.body = body;
+    req.add_header("Content-Type", "multipart/form-data; boundary=BOUNDARY");
+
+    const auto resp = stemsmith::http::server_test_hook::post_job(srv, req);
+    EXPECT_EQ(resp.code, crow::status::BAD_REQUEST);
+}
+
+TEST(http_server_test, service_unavailable_when_no_service)
+{
+    stemsmith::http::config cfg;
+    stemsmith::http::server srv(cfg);
+
+    const std::string part_body = "RIFF....WAVEfmt "; // partial WAV header
+    std::string body;
+    body += "--BOUNDARY\r\n";
+    body += "Content-Disposition: form-data; name=\"file\"; filename=\"file.wav\"\r\n";
+    body += "Content-Type: audio/wav\r\n\r\n";
+    body += part_body;
+    body += "\r\n--BOUNDARY--\r\n";
+
+    crow::request req;
+    req.body = body;
+    req.add_header("Content-Type", "multipart/form-data; boundary=BOUNDARY");
+
+    const auto resp = stemsmith::http::server_test_hook::post_job(srv, req);
+    EXPECT_EQ(resp.code, crow::status::SERVICE_UNAVAILABLE);
 }

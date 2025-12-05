@@ -3,6 +3,7 @@
 #include <atomic>
 // clang-format off
 #include <exception>
+#include <functional>
 #include <crow/include/crow_all.h>
 // clang-format on
 #include <filesystem>
@@ -49,6 +50,9 @@ private:
     std::atomic<std::uint64_t> next_id_{1};
 };
 
+/**
+ * @brief HTTP server for StemSmith job submission and status querying.
+ */
 class server
 {
 public:
@@ -77,6 +81,8 @@ private:
     std::thread thread_;
     std::atomic<bool> running_{false};
 
+    // For ease of testing
+    std::function<std::expected<job_handle, std::string>(job_request)> submit_override_{};
     friend class server_test_hook;
 };
 

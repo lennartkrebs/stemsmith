@@ -186,7 +186,7 @@ void server::run()
 
 crow::response server::handle_post_job(const crow::request& req)
 {
-    if (!svc_)
+    if (!submit_override_ && !svc_)
     {
         return crow::response{crow::status::SERVICE_UNAVAILABLE, R"({"error":"service not ready"})"};
     }
@@ -311,7 +311,9 @@ crow::response server::handle_post_job(const crow::request& req)
     job.observer.callback = [this, job_id](const job_descriptor& desc, const job_event& ev)
     { registry_.update(job_id, desc, ev); };
 
-    const auto handle = svc_->submit(std::move(job));
+    const auto handle =
+        submit_override_ ? submit_override_(std::move(job)) : (svc_ ? svc_->submit(std::move(job))
+                                                                    : std::unexpected("service not ready"));
     if (!handle)
     {
         std::filesystem::remove(target_path, ec);
