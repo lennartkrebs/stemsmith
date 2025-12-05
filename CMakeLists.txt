@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(stemsmith LANGUAGES CXX)
+project(stemsmith LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -55,6 +55,10 @@ add_library(stemsmith_http
     src/http/server.cpp
 )
 
+add_library(miniz STATIC
+    thirdparty/miniz/miniz.c
+)
+
 target_include_directories(${PROJECT_NAME}
     PUBLIC
         ${STEMSMITH_INCLUDE_DIR}
@@ -72,6 +76,8 @@ target_include_directories(stemsmith_http
         ${asio_SOURCE_DIR}/asio/include
         ${STEMSMITH_INCLUDE_DIR}
 )
+
+target_link_libraries(stemsmith_http PRIVATE miniz)
 
 target_include_directories(${PROJECT_NAME}
     SYSTEM PUBLIC

@@ -5,7 +5,7 @@
 #include <fstream>
 #include <optional>
 #include <vector>
-#include <cstring>
+#include <miniz/miniz.h>
 #include <nlohmann/json.hpp>
 
 namespace stemsmith::http
