@@ -76,6 +76,8 @@ private:
     crow::SimpleApp app_;
     std::thread thread_;
     std::atomic<bool> running_{false};
+
+    friend class server_test_hook;
 };
 
 } // namespace stemsmith::http
