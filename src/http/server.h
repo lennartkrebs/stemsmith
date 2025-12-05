@@ -1,15 +1,16 @@
 #pragma once
 
 #include <atomic>
+// clang-format off
 #include <exception>
+#include <crow/include/crow_all.h>
+// clang-format on
 #include <filesystem>
 #include <mutex>
 #include <optional>
 #include <string>
 #include <thread>
 #include <unordered_map>
-
-#include <crow/include/crow_all.h>
 
 #include "stemsmith/job_result.h"
 #include "stemsmith/service.h"
@@ -67,6 +68,7 @@ private:
     void register_routes();
     crow::response handle_post_job(const crow::request& req);
     crow::response handle_get_job(const std::string& id) const;
+    crow::response handle_download(const std::string& id) const;
 
     config config_{};
     std::unique_ptr<service> svc_;

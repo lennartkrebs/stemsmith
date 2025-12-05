@@ -1,6 +1,6 @@
-#include "http/server.h"
-
 #include <gtest/gtest.h>
+
+#include "http/server.h"
 
 TEST(job_registry_test, adds_and_retrieves_job)
 {

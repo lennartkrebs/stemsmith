@@ -4,7 +4,7 @@
 #include <filesystem>
 #include <fstream>
 #include <optional>
-#include <sstream>
+#include <vector>
 
 namespace stemsmith::http
 {
@@ -15,16 +15,16 @@ constexpr std::string_view to_string(job_status status)
 {
     switch (status)
     {
-        case job_status::queued:
-            return "queued";
-        case job_status::running:
-            return "running";
-        case job_status::completed:
-            return "completed";
-        case job_status::failed:
-            return "failed";
-        case job_status::cancelled:
-            return "cancelled";
+    case job_status::queued:
+        return "queued";
+    case job_status::running:
+        return "running";
+    case job_status::completed:
+        return "completed";
+    case job_status::failed:
+        return "failed";
+    case job_status::cancelled:
+        return "cancelled";
     }
     return "unknown";
 }
@@ -32,7 +32,8 @@ constexpr std::string_view to_string(job_status status)
 
 std::string job_registry::next_id()
 {
-    return std::to_string(next_id_.fetch_add(1));;
+    return std::to_string(next_id_.fetch_add(1));
+    ;
 }
 
 void job_registry::add(const std::string& id, job_handle handle)
@@ -72,9 +73,7 @@ std::optional<job_state> job_registry::get(const std::string& id) const
     return std::nullopt;
 }
 
-server::server(const config& cfg)
-    : config_(cfg)
-{}
+server::server(const config& cfg) : config_(cfg) {}
 
 server::~server()
 {
@@ -135,7 +134,8 @@ crow::response server::handle_post_job(const crow::request& req)
         return crow::response{crow::status::SERVICE_UNAVAILABLE, R"({"error":"service not ready"})"};
     }
 
-    if (const auto content_type = req.get_header_value("Content-Type"); content_type.find("multipart/form-data") == std::string::npos)
+    if (const auto content_type = req.get_header_value("Content-Type");
+        content_type.find("multipart/form-data") == std::string::npos)
     {
         return crow::response{crow::status::BAD_REQUEST, R"({"error":"multipart/form-data required"})"};
     }
@@ -158,8 +158,7 @@ crow::response server::handle_post_job(const crow::request& req)
 
     auto ends_with = [](const std::string& value, const std::string& suffix)
     {
-        return value.size() >= suffix.size() &&
-               value.compare(value.size() - suffix.size(), suffix.size(), suffix) == 0;
+        return value.size() >= suffix.size() && value.compare(value.size() - suffix.size(), suffix.size(), suffix) == 0;
     };
 
     if (filename.empty() || !(ends_with(filename, ".wav") || ends_with(filename, ".WAV")))
@@ -168,8 +167,8 @@ crow::response server::handle_post_job(const crow::request& req)
     }
 
     const auto job_id = registry_.next_id();
-    const auto uploads_root = config_.output_root.empty() ? std::filesystem::path("build/uploads")
-                                                          : config_.output_root / "uploads";
+    const auto uploads_root =
+        config_.output_root.empty() ? std::filesystem::path("build/uploads") : config_.output_root / "uploads";
     std::error_code ec;
     std::filesystem::create_directories(uploads_root, ec);
     if (ec)
@@ -187,9 +186,8 @@ crow::response server::handle_post_job(const crow::request& req)
 
     job_request job{};
     job.input_path = target_path;
-    job.observer.callback = [this, job_id](const job_descriptor& desc, const job_event& ev) {
-        registry_.update(job_id, desc, ev);
-    };
+    job.observer.callback = [this, job_id](const job_descriptor& desc, const job_event& ev)
+    { registry_.update(job_id, desc, ev); };
 
     const auto handle = svc_->submit(std::move(job));
     if (!handle)
@@ -232,29 +230,51 @@ crow::response server::handle_get_job(const std::string& id) const
     return crow::response{crow::status::NOT_FOUND, R"({"error":"job not found"})"};
 }
 
+crow::response server::handle_download(const std::string& id) const
+{
+    const auto state = registry_.get(id);
+    if (!state)
+    {
+        return crow::response{crow::status::NOT_FOUND, R"({"error":"job not found"})"};
+    }
+
+    if (state->last_event.status != job_status::completed)
+    {
+        return crow::response{crow::status::CONFLICT, R"({"error":"job not completed"})"};
+    }
+
+    if (state->output_dir.empty())
+    {
+        return crow::response{crow::status::INTERNAL_SERVER_ERROR, R"({"error":"missing output path"})"};
+    }
+
+    return crow::response{crow::status::NOT_IMPLEMENTED, R"({"error":"download packaging not implemented"})"};
+}
+
 void server::register_routes()
 {
-    CROW_ROUTE(app_, "/health")([] {
-        crow::json::wvalue payload;
-        payload["status"] = "ok";
-        return crow::response{crow::status::OK, payload};
-    });
+    CROW_ROUTE(app_, "/health")(
+        []
+        {
+            crow::json::wvalue payload;
+            payload["status"] = "ok";
+            return crow::response{crow::status::OK, payload};
+        });
 
-    CROW_ROUTE(app_, "/")([] {
-        crow::json::wvalue payload;
-        payload["message"] = "Welcome to the StemSmith Job Server";
-        return crow::response{crow::status::OK, payload};
-    });
+    CROW_ROUTE(app_, "/")(
+        []
+        {
+            crow::json::wvalue payload;
+            payload["message"] = "Welcome to the StemSmith Job Server";
+            return crow::response{crow::status::OK, payload};
+        });
 
-    CROW_ROUTE(app_, "/jobs").methods(crow::HTTPMethod::POST)([&](const crow::request& request) {
-        return handle_post_job(request);
-    });
+    CROW_ROUTE(app_, "/jobs")
+        .methods(crow::HTTPMethod::POST)([&](const crow::request& request) { return handle_post_job(request); });
 
     CROW_ROUTE(app_, "/jobs/<string>")([&](const std::string& job_id) { return handle_get_job(job_id); });
 
-    CROW_ROUTE(app_, "/jobs/<string>/download")([&](const std::string&) {
-        return crow::response{crow::status::NOT_IMPLEMENTED, "Not implemented yet"};
-    });
+    CROW_ROUTE(app_, "/jobs/<string>/download")([&](const std::string& job_id) { return handle_download(job_id); });
 }
 
 } // namespace stemsmith::http
