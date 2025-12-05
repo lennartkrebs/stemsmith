@@ -56,7 +56,7 @@ private:
 class server
 {
 public:
-    explicit server(const config& cfg);
+    explicit server(config cfg);
     ~server();
 
     server(const server&) = delete;

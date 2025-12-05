@@ -7,6 +7,7 @@
 #include <miniz/miniz.h>
 #include <nlohmann/json.hpp>
 #include <optional>
+#include <utility>
 #include <vector>
 
 namespace stemsmith::http
@@ -130,7 +131,7 @@ std::optional<job_state> job_registry::get(const std::string& id) const
     return std::nullopt;
 }
 
-server::server(const config& cfg) : config_(cfg) {}
+server::server(config cfg) : config_(std::move(cfg)) {}
 
 server::~server()
 {
@@ -169,6 +170,9 @@ void server::run()
     runtime.cache.root = config_.cache_root.empty() ? "build/model_cache" : config_.cache_root;
     runtime.output_root = config_.output_root.empty() ? "build/output" : config_.output_root;
     runtime.worker_count = config_.worker_count;
+
+    // Use our own signal handling; Crow's default installs SIGINT/SIGTERM hooks.
+    app_.signal_clear();
 
     if (auto created = service::create(std::move(runtime)); created)
     {
@@ -228,7 +232,8 @@ crow::response server::handle_post_job(const crow::request& req)
     {
         std::string lowered = content_type_part;
         std::ranges::transform(lowered, lowered.begin(), [](unsigned char c) { return std::tolower(c); });
-        if (lowered.find("audio/wav") == std::string::npos && lowered.find("audio/x-wav") == std::string::npos)
+        if (lowered.find("audio/wav") == std::string::npos && lowered.find("audio/x-wav") == std::string::npos &&
+            lowered.find("audio/wave") == std::string::npos && lowered.find("audio/vnd.wave") == std::string::npos)
         {
             return crow::response{crow::status::BAD_REQUEST, R"({"error":"WAV content-type required"})"};
         }

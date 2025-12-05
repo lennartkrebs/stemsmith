@@ -77,7 +77,7 @@ target_include_directories(stemsmith_http
         ${STEMSMITH_INCLUDE_DIR}
 )
 
-target_link_libraries(stemsmith_http PRIVATE miniz)
+target_link_libraries(stemsmith_http PRIVATE miniz ${PROJECT_NAME})
 
 target_include_directories(${PROJECT_NAME}
     SYSTEM PUBLIC
@@ -152,6 +152,13 @@ target_compile_definitions(${PROJECT_NAME}_test
 )
 
 add_test(NAME stemsmith_test COMMAND ${PROJECT_NAME}_test)
+
+add_executable(stemsmithd src/http/stemsmithd.cpp)
+target_link_libraries(stemsmithd PRIVATE stemsmith_http)
+target_include_directories(stemsmithd PRIVATE
+    ${STEMSMITH_INCLUDE_DIR}
+    ${STEMSMITH_ROOT}/src
+)
 
 if (STEMSMITH_BUILD_EXAMPLES)
     add_executable(simple_separation_example examples/simple_separation.cpp)
