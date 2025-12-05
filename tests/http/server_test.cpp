@@ -1,6 +1,4 @@
 #include "http/server.h"
-#include "mock_service.h"
-
 #include <asio.hpp>
 #include <chrono>
 #include <cstddef>
