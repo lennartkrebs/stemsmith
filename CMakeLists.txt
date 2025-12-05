@@ -169,4 +169,8 @@ if (STEMSMITH_BUILD_EXAMPLES)
         ${STEMSMITH_ROOT}/examples
     )
     target_compile_definitions(observer_separation_example PRIVATE STEMSMITH_SOURCE_DIR="${STEMSMITH_ROOT}")
+
+    add_executable(http_server_example examples/http_server_example.cpp)
+    target_link_libraries(http_server_example PRIVATE ${PROJECT_NAME} stemsmith_http CURL::libcurl)
+    target_compile_definitions(http_server_example PRIVATE STEMSMITH_SOURCE_DIR="${STEMSMITH_ROOT}")
 endif ()
