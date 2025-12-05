@@ -1,12 +1,13 @@
 #include "server.h"
 
 #include <algorithm>
+#include <expected>
 #include <filesystem>
 #include <fstream>
-#include <optional>
-#include <vector>
 #include <miniz/miniz.h>
 #include <nlohmann/json.hpp>
+#include <optional>
+#include <vector>
 
 namespace stemsmith::http
 {
@@ -29,6 +30,60 @@ constexpr std::string_view to_string(job_status status)
         return "cancelled";
     }
     return "unknown";
+}
+
+std::expected<std::string, std::string> make_zip(const std::filesystem::path& root)
+{
+    if (!std::filesystem::exists(root) || !std::filesystem::is_directory(root))
+    {
+        return std::unexpected("Output path not found");
+    }
+
+    mz_zip_archive zip{};
+    mz_zip_zero_struct(&zip);
+    if (!mz_zip_writer_init_heap(&zip, 0, 0))
+    {
+        return std::unexpected("Failed to init zip writer");
+    }
+
+    for (auto& entry : std::filesystem::recursive_directory_iterator(root))
+    {
+        if (!entry.is_regular_file())
+        {
+            continue;
+        }
+
+        const auto rel = std::filesystem::relative(entry.path(), root).generic_string();
+        if (rel.empty())
+        {
+            continue;
+        }
+
+        if (!mz_zip_writer_add_file(&zip,
+                                    rel.c_str(),
+                                    entry.path().string().c_str(),
+                                    nullptr,
+                                    0,
+                                    MZ_DEFAULT_COMPRESSION))
+        {
+            mz_zip_writer_end(&zip);
+            return std::unexpected("Failed to add file to zip");
+        }
+    }
+
+    void* buffer = nullptr;
+    size_t size = 0;
+    if (!mz_zip_writer_finalize_heap_archive(&zip, &buffer, &size))
+    {
+        mz_zip_writer_end(&zip);
+        return std::unexpected("Failed to finalize zip archive");
+    }
+
+    mz_zip_writer_end(&zip);
+
+    std::string out(static_cast<const char*>(buffer), size);
+    mz_free(buffer);
+    return out;
 }
 } // namespace
 
@@ -168,7 +223,8 @@ crow::response server::handle_post_job(const crow::request& req)
         return crow::response{crow::status::BAD_REQUEST, R"({"error":"WAV input required"})"};
     }
 
-    if (const auto& content_type_part = crow::multipart::get_header_object(headers, "Content-Type").value; !content_type_part.empty())
+    if (const auto& content_type_part = crow::multipart::get_header_object(headers, "Content-Type").value;
+        !content_type_part.empty())
     {
         std::string lowered = content_type_part;
         std::ranges::transform(lowered, lowered.begin(), [](unsigned char c) { return std::tolower(c); });
@@ -252,9 +308,8 @@ crow::response server::handle_post_job(const crow::request& req)
         job.output_subdir = *output_subdir_override;
     }
 
-    job.observer.callback = [this, job_id](const job_descriptor& desc, const job_event& ev) {
-        registry_.update(job_id, desc, ev);
-    };
+    job.observer.callback = [this, job_id](const job_descriptor& desc, const job_event& ev)
+    { registry_.update(job_id, desc, ev); };
 
     const auto handle = svc_->submit(std::move(job));
     if (!handle)
@@ -315,7 +370,19 @@ crow::response server::handle_download(const std::string& id) const
         return crow::response{crow::status::INTERNAL_SERVER_ERROR, R"({"error":"missing output path"})"};
     }
 
-    return crow::response{crow::status::NOT_IMPLEMENTED, R"({"error":"download packaging not implemented"})"};
+    const auto zip_result = make_zip(state->output_dir);
+    if (!zip_result)
+    {
+        crow::json::wvalue body;
+        body["error"] = zip_result.error();
+        return crow::response{crow::status::INTERNAL_SERVER_ERROR, body};
+    }
+
+    const auto filename = "job-" + id + ".zip";
+    crow::response resp{crow::status::OK, zip_result.value()};
+    resp.set_header("Content-Type", "application/zip");
+    resp.set_header("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+    return resp;
 }
 
 void server::register_routes()
