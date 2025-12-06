@@ -385,6 +385,10 @@ button:not(:disabled):hover {
   color: var(--muted);
 }
 
+.endpoint-input {
+  position: relative;
+}
+
 .endpoint input {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -392,6 +396,29 @@ button:not(:disabled):hover {
   padding: var(--space-3);
   border-radius: 8px;
   font-size: 14px;
+  width: 100%;
+  padding-right: calc(var(--space-5) + 10px);
+}
+
+.health-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+  background: var(--muted);
+  position: absolute;
+  right: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+}
+.health-ok {
+  background: #22c55e;
+}
+.health-fail {
+  background: #cd4545;
+}
+.health-unknown {
+  background: var(--muted);
 }
 
 .status-panel h3 {

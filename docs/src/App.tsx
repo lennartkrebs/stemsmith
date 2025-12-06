@@ -6,6 +6,7 @@ import { useUpload } from "./hooks/useUpload";
 import { JobCard } from "./components/JobCard";
 import { JobConfigForm, DEFAULT_CONFIG } from "./components/JobConfig";
 import type { JobConfig } from "./types";
+import { useHealth } from "./hooks/useHealth";
 
 const DEFAULT_ENDPOINT = "http://localhost:8345";
 
@@ -17,6 +18,7 @@ export default function App() {
   const [jobConfig, setJobConfig] = useState<JobConfig>(DEFAULT_CONFIG);
 
   const { upload, uploading, error: uploadError } = useUpload(apiBase);
+  const health = useHealth(apiBase);
 
   useEffect(() => {
     if (uploadError) setToast(uploadError);
@@ -47,7 +49,7 @@ export default function App() {
           <h1>Stemsmith</h1>
           <p className="muted">Upload a WAV, track progress, and download separated stems.</p>
         </div>
-        <EndpointSelector value={apiBase} onChange={setApiBase} />
+        <EndpointSelector value={apiBase} onChange={setApiBase} health={health} />
       </header>
 
       <main className="layout">

@@ -3,11 +3,12 @@ import { useEffect, useState } from "react";
 interface Props {
   value: string;
   onChange: (value: string) => void;
+  health?: "unknown" | "ok" | "fail";
 }
 
 const STORAGE_KEY = "stemsmith-api-base";
 
-export function EndpointSelector({ value, onChange }: Props) {
+export function EndpointSelector({ value, onChange, health = "unknown" }: Props) {
   const [input, setInput] = useState(value);
 
   useEffect(() => {
@@ -28,14 +29,17 @@ export function EndpointSelector({ value, onChange }: Props) {
   return (
     <div className="endpoint">
       <label htmlFor="api-endpoint">API endpoint</label>
-      <input
-        id="api-endpoint"
-        type="text"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onBlur={handleBlur}
-        placeholder="http://localhost:8345"
-      />
+      <div className="endpoint-input">
+        <input
+          id="api-endpoint"
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onBlur={handleBlur}
+          placeholder="http://localhost:8345"
+        />
+        <span className={`health-dot health-${health}`} aria-label={`server ${health}`} />
+      </div>
     </div>
   );
 }
