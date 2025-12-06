@@ -14,6 +14,21 @@ ctest --test-dir build --output-on-failure -R stemsmith_test
 
 When a job first needs a model, the weights are downloaded into `build/model_cache` (examples trigger this automatically).
 
+## Docker (stemsmithd + HTTP API)
+Build the container (requires network for apt/CMake fetches):
+```bash
+DOCKER_BUILDKIT=1 docker build -t stemsmithd .
+```
+
+Run the daemon, exposing port 8345 and persisting cache/output to your host:
+```bash
+docker run --rm -it -p 8345:8345 -v "$HOME/.stemsmith:/root/.stemsmith" stemsmithd
+# override port/paths if needed:
+# docker run --rm -it -p 9000:9000 -v "$HOME/.stemsmith:/root/.stemsmith" stemsmithd --port 9000 --cache-root /root/.stemsmith/cache --output-root /root/.stemsmith/output
+```
+
+**Note:** running many jobs concurrently will saturate CPU; adjust `--workers` or queue jobs accordingly.
+
 ## Examples
 - `simple_separation_example`: single job with progress printed to stdout.
 - `observer_separation_example`: two concurrent jobs demonstrating per-job observers
@@ -63,5 +78,3 @@ int main()
     std::cout << "Output at: " << result.output_dir << std::endl;
 }
 ```
-
-## TODO: Docker docs
