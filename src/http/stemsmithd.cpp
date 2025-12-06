@@ -1,9 +1,7 @@
-#include "server.h"
-
 #include <atomic>
+#include <chrono>
 #include <csignal>
 #include <cstdlib>
-#include <chrono>
 #include <filesystem>
 #include <iostream>
 #include <optional>
@@ -11,6 +9,8 @@
 #include <string_view>
 #include <thread>
 #include <vector>
+
+#include "server.h"
 
 namespace
 {
@@ -41,7 +41,8 @@ void print_usage(const char* argv0)
 {
     std::cout << "Usage: " << argv0 << " [--bind-address ADDR] [--port PORT] [--cache-root PATH] [--output-root PATH]\n"
               << "             [--workers N]\n\n"
-              << "Defaults: bind 0.0.0.0, port 8345, paths under $HOME/.stemsmith (or $STEMSMITH_HOME), workers = HW threads.\n";
+              << "Defaults: bind 0.0.0.0, port 8345, paths under $HOME/.stemsmith (or $STEMSMITH_HOME), workers = HW "
+                 "threads.\n";
 }
 
 std::optional<options> parse_args(int argc, char* argv[])
@@ -51,7 +52,8 @@ std::optional<options> parse_args(int argc, char* argv[])
     opts.cache_root = root / "cache";
     opts.output_root = root / "output";
 
-    auto parse_value = [](std::string_view arg, std::string_view name) -> std::optional<std::string_view> {
+    auto parse_value = [](std::string_view arg, std::string_view name) -> std::optional<std::string_view>
+    {
         if (arg == name)
         {
             return std::nullopt; // value should follow
@@ -224,7 +226,8 @@ int main(int argc, char* argv[])
         return 0;
     }
 
-    const auto ensure_dir = [](const std::filesystem::path& path, const char* label) {
+    const auto ensure_dir = [](const std::filesystem::path& path, const char* label)
+    {
         std::error_code ec;
         std::filesystem::create_directories(path, ec);
         if (ec)

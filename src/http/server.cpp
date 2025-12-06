@@ -243,11 +243,11 @@ crow::response server::handle_post_job(const crow::request& req)
     {
         std::string lowered = content_type_part;
         std::ranges::transform(lowered, lowered.begin(), [](unsigned char c) { return std::tolower(c); });
-        const bool is_wav = lowered.find("audio/wav") != std::string::npos ||
-                            lowered.find("audio/x-wav") != std::string::npos ||
-                            lowered.find("audio/wave") != std::string::npos ||
-                            lowered.find("audio/vnd.wave") != std::string::npos;
-        if (const bool is_octet_stream = lowered.find("application/octet-stream") != std::string::npos; !is_wav && !is_octet_stream)
+        const bool is_wav =
+            lowered.find("audio/wav") != std::string::npos || lowered.find("audio/x-wav") != std::string::npos ||
+            lowered.find("audio/wave") != std::string::npos || lowered.find("audio/vnd.wave") != std::string::npos;
+        if (const bool is_octet_stream = lowered.find("application/octet-stream") != std::string::npos;
+            !is_wav && !is_octet_stream)
         {
             return crow::response{crow::status::BAD_REQUEST, R"({"error":"WAV content-type required"})"};
         }
@@ -330,9 +330,8 @@ crow::response server::handle_post_job(const crow::request& req)
     job.observer.callback = [this, job_id](const job_descriptor& desc, const job_event& ev)
     { registry_.update(job_id, desc, ev); };
 
-    const auto handle =
-        submit_override_ ? submit_override_(std::move(job)) : (svc_ ? svc_->submit(std::move(job))
-                                                                    : std::unexpected("service not ready"));
+    const auto handle = submit_override_ ? submit_override_(std::move(job))
+                                         : (svc_ ? svc_->submit(std::move(job)) : std::unexpected("service not ready"));
     if (!handle)
     {
         std::filesystem::remove(target_path, ec);

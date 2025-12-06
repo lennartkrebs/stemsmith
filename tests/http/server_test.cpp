@@ -1,5 +1,7 @@
-#include "http/server.h"
+// clang-format off
+#include <exception>
 #include <asio.hpp>
+// clang-format on
 #include <chrono>
 #include <cstddef>
 #include <curl/curl.h>
@@ -7,6 +9,8 @@
 #include <optional>
 #include <string>
 #include <thread>
+
+#include "http/server.h"
 
 namespace
 {
@@ -83,7 +87,8 @@ public:
         return srv.handle_post_job(req);
     }
 
-    static void set_submit_override(server& srv, std::function<std::expected<job_handle, std::string>(job_request)> func)
+    static void set_submit_override(server& srv,
+                                    std::function<std::expected<job_handle, std::string>(job_request)> func)
     {
         srv.submit_override_ = std::move(func);
     }
@@ -155,7 +160,9 @@ TEST(http_server_test, post_jobs_rejects_missing_file)
 {
     stemsmith::http::config cfg;
     stemsmith::http::server srv(cfg);
-    stemsmith::http::server_test_hook::set_submit_override(srv, [](stemsmith::job_request) { return std::unexpected<std::string>(""); });
+    stemsmith::http::server_test_hook::set_submit_override(srv,
+                                                           [](stemsmith::job_request)
+                                                           { return std::unexpected<std::string>(""); });
 
     const std::string body = "--BOUNDARY--\r\n";
     crow::request req;
@@ -171,7 +178,9 @@ TEST(http_server_test, post_jobs_rejects_non_wav)
 {
     stemsmith::http::config cfg;
     stemsmith::http::server srv(cfg);
-    stemsmith::http::server_test_hook::set_submit_override(srv, [](stemsmith::job_request) { return std::unexpected<std::string>(""); });
+    stemsmith::http::server_test_hook::set_submit_override(srv,
+                                                           [](stemsmith::job_request)
+                                                           { return std::unexpected<std::string>(""); });
 
     const std::string part_body = "abc";
     std::string body;
@@ -194,8 +203,9 @@ TEST(http_server_test, post_jobs_rejects_bad_config_json)
 {
     stemsmith::http::config cfg;
     stemsmith::http::server srv(cfg);
-    stemsmith::http::server_test_hook::set_submit_override(
-        srv, [](stemsmith::job_request) { return stemsmith::job_handle{}; });
+    stemsmith::http::server_test_hook::set_submit_override(srv,
+                                                           [](stemsmith::job_request)
+                                                           { return stemsmith::job_handle{}; });
 
     const std::string file_body = "RIFF....WAVE"; // minimal marker content
     std::string body;
@@ -222,8 +232,9 @@ TEST(http_server_test, post_jobs_rejects_large_file)
 {
     stemsmith::http::config cfg;
     stemsmith::http::server srv(cfg);
-    stemsmith::http::server_test_hook::set_submit_override(
-        srv, [](stemsmith::job_request) { return stemsmith::job_handle{}; });
+    stemsmith::http::server_test_hook::set_submit_override(srv,
+                                                           [](stemsmith::job_request)
+                                                           { return stemsmith::job_handle{}; });
 
     constexpr std::size_t too_big = 100 * 1024 * 1024 + 1;
     std::string file_body(too_big, 'x');
@@ -252,7 +263,8 @@ TEST(http_server_test, post_jobs_accepts_valid_wav_and_config)
     bool submit_called = false;
     stemsmith::http::server_test_hook::set_submit_override(
         srv,
-        [&](const stemsmith::job_request& req) -> std::expected<stemsmith::job_handle, std::string> {
+        [&](const stemsmith::job_request& req) -> std::expected<stemsmith::job_handle, std::string>
+        {
             submit_called = true;
             EXPECT_TRUE(req.profile.has_value());
             EXPECT_TRUE(req.stems.has_value());

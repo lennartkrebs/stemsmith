@@ -1,10 +1,10 @@
-#include "http/server.h"
-
 #include <chrono>
 #include <curl/curl.h>
 #include <filesystem>
 #include <iostream>
 #include <thread>
+
+#include "http/server.h"
 
 using stemsmith::http::config;
 using stemsmith::http::server;
@@ -31,12 +31,16 @@ std::optional<std::string> post_job(const std::string& url, const std::filesyste
     curl_easy_setopt(curl, CURLOPT_HTTPPOST, form);
 
     std::string response;
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char* ptr, std::size_t size, std::size_t nmemb, void* userdata) {
-        const auto total = size * nmemb;
-        auto* out = static_cast<std::string*>(userdata);
-        out->append(ptr, total);
-        return total;
-    });
+    curl_easy_setopt(
+        curl,
+        CURLOPT_WRITEFUNCTION,
+        +[](char* ptr, std::size_t size, std::size_t nmemb, void* userdata)
+        {
+            const auto total = size * nmemb;
+            auto* out = static_cast<std::string*>(userdata);
+            out->append(ptr, total);
+            return total;
+        });
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
 
     if (const auto rc = curl_easy_perform(curl); rc != CURLE_OK)
@@ -58,7 +62,7 @@ constexpr auto kExampleTrack = "data/test_files/stemsmith_demo_track.wav";
 #ifdef STEMSMITH_SOURCE_DIR
 const std::filesystem::path kExampleTrackPath = std::filesystem::path{STEMSMITH_SOURCE_DIR} / kExampleTrack;
 #endif
-}
+} // namespace
 
 int main()
 {

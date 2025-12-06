@@ -1,9 +1,8 @@
-#include "http/server.h"
-
-#include <gtest/gtest.h>
-
 #include <filesystem>
 #include <fstream>
+#include <gtest/gtest.h>
+
+#include "http/server.h"
 
 namespace stemsmith::http
 {
