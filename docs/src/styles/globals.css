@@ -130,12 +130,13 @@ a {
 .config-panel {
   margin-top: var(--space-4);
   background: var(--panel-alt);
+  padding-bottom: var(--space-1);
 }
 
 .config-row {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-4);
   margin-bottom: var(--space-5);
 }
 
