@@ -11,3 +11,10 @@ export interface JobStatusResponse {
 export interface UploadResult {
   id: string;
 }
+
+export interface JobConfig {
+  model: ModelProfileKey;
+  stems: string[];
+}
+
+export type ModelProfileKey = "balanced-four-stem" | "balanced-six-stem";

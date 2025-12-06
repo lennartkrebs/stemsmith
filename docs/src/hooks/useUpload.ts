@@ -1,19 +1,18 @@
-import { useState, useCallback } from "react";
-import { createApiClient } from "../api/client";
-import type { UploadResult } from "../types";
+import {useCallback, useState} from "react";
+import {createApiClient} from "../api/client";
+import type {JobConfig, UploadResult} from "../types";
 
 export function useUpload(baseUrl: string) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const upload = useCallback(
-    async (file: File): Promise<UploadResult> => {
+    async (file: File, config?: JobConfig): Promise<UploadResult> => {
       setUploading(true);
       setError(null);
       try {
         const client = createApiClient({ baseUrl });
-        const result = await client.upload(file);
-        return result;
+        return await client.upload(file, config);
       } catch (err) {
         const message = err instanceof Error ? err.message : "Upload failed";
         setError(message);

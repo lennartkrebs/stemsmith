@@ -1,4 +1,4 @@
-import type { JobStatusResponse, UploadResult } from "../types";
+import type { JobConfig, JobStatusResponse, UploadResult } from "../types";
 
 export interface ApiClientOptions {
   baseUrl: string;
@@ -11,11 +11,18 @@ const jsonHeaders = {
 export function createApiClient({ baseUrl }: ApiClientOptions) {
   const url = (path: string) => `${baseUrl.replace(/\/$/, "")}${path}`;
 
-  const upload = async (file: File): Promise<UploadResult> => {
+  const upload = async (file: File, config?: JobConfig): Promise<UploadResult> => {
     const form = new FormData();
     // Force the part MIME to audio/wav for consistency.
     const wav = new File([file], file.name, { type: "audio/wav" });
     form.append("file", wav);
+    console.debug("[upload] sending file", wav);
+
+    if (config) {
+      const cfg = JSON.stringify(config);
+      console.debug("[upload] sending config", cfg);
+      form.append("config", cfg);
+    }
 
     const resp = await fetch(url("/jobs"), {
       method: "POST",

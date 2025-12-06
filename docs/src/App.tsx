@@ -4,6 +4,9 @@ import { EndpointSelector, loadSavedEndpoint } from "./components/EndpointSelect
 import { Toast } from "./components/Toast";
 import { useUpload } from "./hooks/useUpload";
 import { JobCard } from "./components/JobCard";
+import { JobConfigForm, DEFAULT_CONFIG } from "./components/JobConfig";
+import type { JobConfig } from "./types";
+import { useHealth } from "./hooks/useHealth";
 
 const DEFAULT_ENDPOINT = "http://localhost:8345";
 
@@ -12,8 +15,10 @@ export default function App() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [jobs, setJobs] = useState<string[]>([]);
   const [toast, setToast] = useState<string | null>(null);
+  const [jobConfig, setJobConfig] = useState<JobConfig>(DEFAULT_CONFIG);
 
   const { upload, uploading, error: uploadError } = useUpload(apiBase);
+  const health = useHealth(apiBase);
 
   useEffect(() => {
     if (uploadError) setToast(uploadError);
@@ -24,7 +29,7 @@ export default function App() {
   const handleUpload = async () => {
     if (!selectedFile) return;
     try {
-      const result = await upload(selectedFile);
+      const result = await upload(selectedFile, jobConfig);
       setJobs((prev) => [result.id, ...prev]);
       setToast(null);
     } catch (err) {
@@ -44,12 +49,13 @@ export default function App() {
           <h1>Stemsmith</h1>
           <p className="muted">Upload a WAV, track progress, and download separated stems.</p>
         </div>
-        <EndpointSelector value={apiBase} onChange={setApiBase} />
+        <EndpointSelector value={apiBase} onChange={setApiBase} health={health} />
       </header>
 
       <main className="layout">
         <section className="panel">
           <UploadArea file={selectedFile} onFileChange={setSelectedFile} disabled={uploading} />
+          <JobConfigForm value={jobConfig} onChange={setJobConfig} />
           <div className="actions">
             <button className="secondary" onClick={reset} disabled={!selectedFile || uploading}>
               Reset
