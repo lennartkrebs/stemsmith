@@ -73,6 +73,7 @@ private:
     void register_routes();
     crow::response handle_post_job(const crow::request& req);
     crow::response handle_get_job(const std::string& id) const;
+    crow::response handle_delete_job(const std::string& id);
     crow::response handle_download(const std::string& id) const;
 
     config config_{};

@@ -72,7 +72,7 @@ export default function App() {
               <p className="muted">No jobs yet. Upload a WAV to start.</p>
             </div>
           ) : (
-            jobs.map((id) => <JobCard key={id} baseUrl={apiBase} jobId={id} />)
+            jobs.map((id) => <JobCard key={id} baseUrl={apiBase} jobId={id} onRemove={(jobId) => setJobs((prev) => prev.filter((j) => j !== jobId))} />)
           )}
         </section>
       </main>

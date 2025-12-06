@@ -372,6 +372,37 @@ crow::response server::handle_get_job(const std::string& id) const
     return crow::response{crow::status::NOT_FOUND, R"({"error":"job not found"})"};
 }
 
+crow::response server::handle_delete_job(const std::string& id)
+{
+    const auto state = registry_.get(id);
+    if (!state)
+    {
+        return crow::response{crow::status::NOT_FOUND, R"({"error":"job not found"})"};
+    }
+
+    if (state->last_event.status == job_status::completed || state->last_event.status == job_status::failed ||
+        state->last_event.status == job_status::cancelled)
+    {
+        return crow::response{crow::status::CONFLICT, R"({"error":"job not cancellable"})"};
+    }
+
+    if (const auto cancel_result = state->handle.cancel("cancelled by client"); !cancel_result)
+    {
+        crow::json::wvalue body;
+        body["error"] = cancel_result.error();
+        return crow::response{crow::status::CONFLICT, body};
+    }
+
+    job_event ev;
+    ev.id = state->handle.id();
+    ev.status = job_status::cancelled;
+    ev.progress = -1.f;
+    job_descriptor desc = state->handle.descriptor();
+    registry_.update(id, desc, ev);
+
+    return crow::response{crow::status::ACCEPTED, R"({"status":"cancellation requested"})"};
+}
+
 crow::response server::handle_download(const std::string& id) const
 {
     const auto state = registry_.get(id);
@@ -409,7 +440,7 @@ void server::register_routes()
 {
     auto& cors = app_.get_middleware<crow::CORSHandler>().global();
     cors.origin("*")
-        .methods(crow::HTTPMethod::GET, crow::HTTPMethod::POST, crow::HTTPMethod::OPTIONS)
+        .methods(crow::HTTPMethod::GET, crow::HTTPMethod::POST, crow::HTTPMethod::OPTIONS, crow::HTTPMethod::DELETE)
         .headers("Content-Type");
 
     CROW_ROUTE(app_, "/health")(
@@ -436,12 +467,15 @@ void server::register_routes()
             {
                 crow::response res{crow::status::OK};
                 res.add_header("Access-Control-Allow-Origin", "*");
-                res.add_header("Access-Control-Allow-Methods", "POST, OPTIONS");
+                res.add_header("Access-Control-Allow-Methods", "POST, OPTIONS, DELETE, GET");
                 res.add_header("Access-Control-Allow-Headers", "Content-Type");
                 return res;
             });
 
     CROW_ROUTE(app_, "/jobs/<string>")([&](const std::string& job_id) { return handle_get_job(job_id); });
+
+    CROW_ROUTE(app_, "/jobs/<string>")
+        .methods(crow::HTTPMethod::DELETE)([&](const std::string& job_id) { return handle_delete_job(job_id); });
 
     CROW_ROUTE(app_, "/jobs/<string>/download")([&](const std::string& job_id) { return handle_download(job_id); });
 }

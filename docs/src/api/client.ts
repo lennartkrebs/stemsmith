@@ -60,5 +60,15 @@ export function createApiClient({ baseUrl }: ApiClientOptions) {
     return resp.blob();
   };
 
-  return { upload, getStatus, download };
+  const cancel = async (id: string): Promise<void> => {
+    const resp = await fetch(url(`/jobs/${id}`), {
+      method: "DELETE"
+    });
+    if (!resp.ok && resp.status !== 404) {
+      const text = await resp.text();
+      throw new Error(`Cancel failed (${resp.status}): ${text}`);
+    }
+  };
+
+  return { upload, getStatus, download, cancel };
 }

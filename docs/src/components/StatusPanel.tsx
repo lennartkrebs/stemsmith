@@ -7,17 +7,55 @@ interface Props {
   onDownload?: () => void;
   downloading?: boolean;
   jobId?: string;
+  onCancel?: () => void;
+  cancelling?: boolean;
+  onRemove?: (id: string) => void;
 }
 
-export function StatusPanel({ status, loading, error, onDownload, downloading, jobId }: Props) {
+export function StatusPanel({
+  status,
+  loading,
+  error,
+  onDownload,
+  downloading,
+  jobId,
+  onCancel,
+  cancelling,
+  onRemove
+}: Props) {
   const progressValue = status?.progress ?? -1;
   const showProgress = status && status.status !== "unknown";
+  const canCancel = status && (status.status === "queued" || status.status === "running");
+  const statusError = status && status.status === "cancelled" ? null : status?.error;
+  const isTerminal =
+      status && (status.status === "completed" || status.status === "failed" || status.status === "cancelled");
 
   return (
     <div className="status-panel">
       <div className="status-header">
         <h3>Status</h3>
-        {(status?.id || jobId) && <span className="job-id">Job {status?.id ?? jobId}</span>}
+        <div className="status-actions">
+          {(status?.id || jobId) && <span className="job-id">Job {status?.id ?? jobId}</span>}
+          {onRemove && jobId && (
+            <button
+              className="link"
+              onClick={() => {
+                if (!isTerminal) {
+                  // eslint-disable-next-line no-alert
+                  const confirmed = window.confirm("Job is still running. Cancel it before removing?");
+                  if (!confirmed) return;
+                  if (onCancel) {
+                    onCancel();
+                    return;
+                  }
+                }
+                onRemove(jobId);
+              }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
       {showProgress ? (
         <>
@@ -41,14 +79,19 @@ export function StatusPanel({ status, loading, error, onDownload, downloading, j
               {progressValue < 0 ? "--" : `${Math.round(progressValue * 100)}%`}
             </span>
           </div>
-          {status?.error && <div className="error-text">{status.error}</div>}
-          <button
-            className="primary"
-            disabled={!status || status.status !== "completed" || downloading}
-            onClick={onDownload}
-          >
-            {downloading ? "Downloading..." : "Download stems"}
-          </button>
+          {statusError && <div className="error-text">{statusError}</div>}
+          <div className="actions">
+            <button className="secondary" disabled={!canCancel || cancelling} onClick={onCancel}>
+              {cancelling ? "Cancelling..." : "Cancel"}
+            </button>
+            <button
+              className="primary"
+              disabled={!status || status.status !== "completed" || downloading}
+              onClick={onDownload}
+            >
+              {downloading ? "Downloading..." : "Download stems"}
+            </button>
+          </div>
         </>
       ) : (
         <p className="muted">{loading ? "Loading..." : "No job yet"}</p>
