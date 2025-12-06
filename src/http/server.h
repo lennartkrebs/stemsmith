@@ -78,7 +78,7 @@ private:
     config config_{};
     std::unique_ptr<service> svc_;
     job_registry registry_;
-    crow::SimpleApp app_;
+    crow::App<crow::CORSHandler> app_;
     std::thread thread_;
     std::atomic<bool> running_{false};
 

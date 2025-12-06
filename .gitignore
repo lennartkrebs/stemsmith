@@ -15,3 +15,6 @@ yarn-error.log**
 pnpm-debug.log*
 .vs/
 *.log
+node_modules/
+coverage/
+*.tsbuildinfo

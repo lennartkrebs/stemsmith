@@ -407,6 +407,11 @@ crow::response server::handle_download(const std::string& id) const
 
 void server::register_routes()
 {
+    auto& cors = app_.get_middleware<crow::CORSHandler>().global();
+    cors.origin("*")
+        .methods(crow::HTTPMethod::GET, crow::HTTPMethod::POST, crow::HTTPMethod::OPTIONS)
+        .headers("Content-Type");
+
     CROW_ROUTE(app_, "/health")(
         []
         {
@@ -425,6 +430,16 @@ void server::register_routes()
 
     CROW_ROUTE(app_, "/jobs")
         .methods(crow::HTTPMethod::POST)([&](const crow::request& request) { return handle_post_job(request); });
+    CROW_ROUTE(app_, "/jobs")
+        .methods(crow::HTTPMethod::OPTIONS)(
+            []
+            {
+                crow::response res{crow::status::OK};
+                res.add_header("Access-Control-Allow-Origin", "*");
+                res.add_header("Access-Control-Allow-Methods", "POST, OPTIONS");
+                res.add_header("Access-Control-Allow-Headers", "Content-Type");
+                return res;
+            });
 
     CROW_ROUTE(app_, "/jobs/<string>")([&](const std::string& job_id) { return handle_get_job(job_id); });
 
