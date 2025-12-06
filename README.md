@@ -8,7 +8,7 @@ Stemsmith is a C++20 library and service facade for Demucs-powered music stem se
 git submodule update --init --recursive
 cmake -S . -B build -DENABLE_OPENMP=ON
 cmake --build build --target stemsmith stemsmith_test
-ctest --test-dir build --output-on-failure -R stemsmith-test
+ctest --test-dir build --output-on-failure -R stemsmith_test
 ```
 
 When a job first needs a model, the weights are downloaded into `build/model_cache` (examples trigger this automatically).
@@ -16,13 +16,9 @@ When a job first needs a model, the weights are downloaded into `build/model_cac
 ## Examples
 - `simple_separation_example`: single job with progress printed to stdout.
 - `observer_separation_example`: two concurrent jobs demonstrating per-job observers
+- `http_server_example`: a simple HTTP server exposing a REST API for submitting separation jobs.
 
 Build targets are created when `STEMSMITH_BUILD_EXAMPLES=ON` (default):
-```bash
-cmake --build build --target simple_separation_example observer_separation_example
-./build/simple_separation_example
-./build/observer_separation_example
-```
 
 ## API
 Include the umbrella header:
@@ -66,9 +62,3 @@ int main()
     std::cout << "Output at: " << result.output_dir << std::endl;
 }
 ```
-
-## CI
-GitHub Actions workflow: `.github/workflows/ci.yml`
-- Ubuntu build with OpenMP enabled
-- Installs curl/pkg-config/FFTW/OpenBLAS/ccache
-- Builds `stemsmith` + `stemsmith_test`, runs `ctest -R stemsmith-test`
