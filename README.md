@@ -1,5 +1,6 @@
 # stemsmith ⚒️
 [![CI](https://github.com/lennartkrebs/stemsmith/actions/workflows/ci.yml/badge.svg)](https://github.com/lennartkrebs/stemsmith/actions/workflows/ci.yml)
+[![Pages](https://github.com/lennartkrebs/stemsmith/actions/workflows/deploy-frontend.yml/badge.svg)](https://github.com/lennartkrebs/stemsmith/actions/workflows/deploy-frontend.yml)
 
 Stemsmith is a C++20 library and service facade for Demucs-powered music stem separation. It wraps model caching, audio I/O, and job orchestration behind a small API that can be embedded in apps or invoked from examples. Inference is powered by the bundled demucscpp backend.
 
