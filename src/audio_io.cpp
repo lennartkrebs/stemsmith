@@ -44,8 +44,7 @@ std::expected<std::vector<float>, std::string> ensure_supported_channels(const n
     return std::unexpected("Only mono or stereo inputs are supported");
 }
 
-std::expected<std::vector<float>, std::string> resample_if_needed(const std::vector<float>& samples,
-                                                                  int source_rate)
+std::expected<std::vector<float>, std::string> resample_if_needed(const std::vector<float>& samples, int source_rate)
 {
     if (source_rate == TARGET_SAMPLE_RATE || samples.empty())
     {

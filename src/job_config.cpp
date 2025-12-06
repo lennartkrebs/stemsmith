@@ -115,6 +115,32 @@ std::expected<job_template, std::string> job_template::from_file(const std::file
     }
     const auto doc = std::move(doc_result).value();
 
+    if (!doc.is_object())
+    {
+        return std::unexpected("JSON config must be an object");
+    }
+
+    // Delegate to string helper to keep logic in one place.
+    return from_json_string(doc.dump());
+}
+
+std::expected<job_template, std::string> job_template::from_json_string(const std::string& text)
+{
+    nlohmann::json doc;
+    try
+    {
+        doc = nlohmann::json::parse(text);
+    }
+    catch (const std::exception& ex)
+    {
+        return std::unexpected(std::string{"Failed to parse JSON: "} + ex.what());
+    }
+
+    if (!doc.is_object())
+    {
+        return std::unexpected("JSON config must be an object");
+    }
+
     job_template config;
 
     auto* active_profile = find_profile(config.profile);

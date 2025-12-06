@@ -1,0 +1,15 @@
+.git
+.github
+.idea
+.vscode
+build
+cmake-build-*
+*.o
+*.obj
+*.pch
+*.pdb
+*.swp
+*.tmp
+*.log
+__pycache__
+.DS_Store

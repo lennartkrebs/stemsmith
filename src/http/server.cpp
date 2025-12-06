@@ -1,0 +1,449 @@
+#include "server.h"
+
+#include <algorithm>
+#include <expected>
+#include <filesystem>
+#include <fstream>
+#include <miniz/miniz.h>
+#include <nlohmann/json.hpp>
+#include <optional>
+#include <utility>
+#include <vector>
+
+namespace stemsmith::http
+{
+
+namespace
+{
+constexpr std::string_view to_string(job_status status)
+{
+    switch (status)
+    {
+    case job_status::queued:
+        return "queued";
+    case job_status::running:
+        return "running";
+    case job_status::completed:
+        return "completed";
+    case job_status::failed:
+        return "failed";
+    case job_status::cancelled:
+        return "cancelled";
+    }
+    return "unknown";
+}
+
+std::expected<std::string, std::string> make_zip(const std::filesystem::path& root)
+{
+    if (!std::filesystem::exists(root) || !std::filesystem::is_directory(root))
+    {
+        return std::unexpected("Output path not found");
+    }
+
+    mz_zip_archive zip{};
+    mz_zip_zero_struct(&zip);
+    if (!mz_zip_writer_init_heap(&zip, 0, 0))
+    {
+        return std::unexpected("Failed to init zip writer");
+    }
+
+    for (auto& entry : std::filesystem::recursive_directory_iterator(root))
+    {
+        if (!entry.is_regular_file())
+        {
+            continue;
+        }
+
+        const auto rel = std::filesystem::relative(entry.path(), root).generic_string();
+        if (rel.empty())
+        {
+            continue;
+        }
+
+        if (!mz_zip_writer_add_file(&zip,
+                                    rel.c_str(),
+                                    entry.path().string().c_str(),
+                                    nullptr,
+                                    0,
+                                    MZ_DEFAULT_COMPRESSION))
+        {
+            mz_zip_writer_end(&zip);
+            return std::unexpected("Failed to add file to zip");
+        }
+    }
+
+    void* buffer = nullptr;
+    size_t size = 0;
+    if (!mz_zip_writer_finalize_heap_archive(&zip, &buffer, &size))
+    {
+        mz_zip_writer_end(&zip);
+        return std::unexpected("Failed to finalize zip archive");
+    }
+
+    mz_zip_writer_end(&zip);
+
+    std::string out(static_cast<const char*>(buffer), size);
+    mz_free(buffer);
+    return out;
+}
+} // namespace
+
+std::string job_registry::next_id()
+{
+    return std::to_string(next_id_.fetch_add(1));
+    ;
+}
+
+void job_registry::add(const std::string& id, job_handle handle, std::filesystem::path upload_path)
+{
+    std::lock_guard lock(mutex_);
+    job_state state;
+    state.last_event.id = handle.id();
+    state.last_event.status = job_status::queued;
+    state.handle = std::move(handle);
+    state.upload_path = std::move(upload_path);
+    jobs_.emplace(id, std::move(state));
+}
+
+void job_registry::update(const std::string& id, const job_descriptor& desc, const job_event& ev)
+{
+    std::optional<std::filesystem::path> upload_to_remove;
+    {
+        std::lock_guard lock(mutex_);
+        const auto it = jobs_.find(id);
+        if (it == jobs_.end())
+        {
+            return;
+        }
+
+        it->second.last_event = ev;
+        if (ev.status == job_status::completed || ev.status == job_status::failed || ev.status == job_status::cancelled)
+        {
+            it->second.output_dir = desc.output_dir;
+            upload_to_remove = std::move(it->second.upload_path);
+        }
+    }
+
+    if (upload_to_remove)
+    {
+        std::error_code ec;
+        std::filesystem::remove(*upload_to_remove, ec);
+    }
+}
+
+std::optional<job_state> job_registry::get(const std::string& id) const
+{
+    std::lock_guard lock(mutex_);
+    if (const auto it = jobs_.find(id); it != jobs_.end())
+    {
+        return it->second;
+    }
+
+    return std::nullopt;
+}
+
+server::server(config cfg) : config_(std::move(cfg)) {}
+
+server::~server()
+{
+    stop();
+}
+
+void server::start()
+{
+    if (running_.exchange(true))
+    {
+        return;
+    }
+
+    thread_ = std::thread([this] { run(); });
+}
+
+void server::stop()
+{
+    if (!running_.exchange(false))
+    {
+        return;
+    }
+
+    app_.stop();
+
+    if (thread_.joinable())
+    {
+        thread_.join();
+    }
+}
+
+void server::run()
+{
+    runtime_config runtime{};
+    // Maybe assert rather than defaulting?
+    runtime.cache.root = config_.cache_root.empty() ? "build/model_cache" : config_.cache_root;
+    runtime.output_root = config_.output_root.empty() ? "build/output" : config_.output_root;
+    runtime.worker_count = config_.worker_count;
+
+    // Use our own signal handling; Crow's default installs SIGINT/SIGTERM hooks.
+    app_.signal_clear();
+
+    if (auto created = service::create(std::move(runtime)); created)
+    {
+        svc_ = std::move(*created);
+    }
+    else
+    {
+        svc_.reset();
+    }
+
+    register_routes();
+    app_.loglevel(crow::LogLevel::Warning);
+    app_.bindaddr(config_.bind_address).port(config_.port).multithreaded().run();
+}
+
+crow::response server::handle_post_job(const crow::request& req)
+{
+    if (!submit_override_ && !svc_)
+    {
+        return crow::response{crow::status::SERVICE_UNAVAILABLE, R"({"error":"service not ready"})"};
+    }
+
+    if (const auto content_type = req.get_header_value("Content-Type");
+        content_type.find("multipart/form-data") == std::string::npos)
+    {
+        return crow::response{crow::status::BAD_REQUEST, R"({"error":"multipart/form-data required"})"};
+    }
+
+    crow::multipart::message msg(req);
+    auto it = msg.part_map.find("file");
+    if (it == msg.part_map.end())
+    {
+        return crow::response{crow::status::BAD_REQUEST, R"({"error":"file field required"})"};
+    }
+
+    const auto& [headers, header_body] = it->second;
+    const auto& [_, params] = crow::multipart::get_header_object(headers, "Content-Disposition");
+
+    std::string filename;
+    if (const auto name_it = params.find("filename"); name_it != params.end())
+    {
+        filename = name_it->second;
+    }
+
+    auto ends_with = [](const std::string& value, const std::string& suffix)
+    {
+        return value.size() >= suffix.size() && value.compare(value.size() - suffix.size(), suffix.size(), suffix) == 0;
+    };
+
+    if (filename.empty() || !(ends_with(filename, ".wav") || ends_with(filename, ".WAV")))
+    {
+        return crow::response{crow::status::BAD_REQUEST, R"({"error":"WAV input required"})"};
+    }
+
+    if (const auto& content_type_part = crow::multipart::get_header_object(headers, "Content-Type").value;
+        !content_type_part.empty())
+    {
+        std::string lowered = content_type_part;
+        std::ranges::transform(lowered, lowered.begin(), [](unsigned char c) { return std::tolower(c); });
+        const bool is_wav =
+            lowered.find("audio/wav") != std::string::npos || lowered.find("audio/x-wav") != std::string::npos ||
+            lowered.find("audio/wave") != std::string::npos || lowered.find("audio/vnd.wave") != std::string::npos;
+        if (const bool is_octet_stream = lowered.find("application/octet-stream") != std::string::npos;
+            !is_wav && !is_octet_stream)
+        {
+            return crow::response{crow::status::BAD_REQUEST, R"({"error":"WAV content-type required"})"};
+        }
+    }
+
+    if (constexpr std::size_t kMaxUploadBytes = 100 * 1024 * 1024; header_body.size() > kMaxUploadBytes)
+    {
+        return crow::response{crow::status::PAYLOAD_TOO_LARGE, R"({"error":"file too large"})"};
+    }
+
+    job_template template_config{};
+    std::optional<std::filesystem::path> output_subdir_override{};
+    if (const auto cfg_it = msg.part_map.find("config"); cfg_it != msg.part_map.end())
+    {
+        const auto cfg_result = job_template::from_json_string(cfg_it->second.body);
+        if (!cfg_result)
+        {
+            crow::json::wvalue body;
+            body["error"] = cfg_result.error();
+            return crow::response{crow::status::BAD_REQUEST, body};
+        }
+
+        template_config = cfg_result.value();
+
+        // Optional: allow output_subdir in config JSON.
+        try
+        {
+            if (const auto json = nlohmann::json::parse(cfg_it->second.body); json.contains("output_subdir"))
+            {
+                if (!json["output_subdir"].is_string())
+                {
+                    crow::json::wvalue body;
+                    body["error"] = "output_subdir must be a string";
+                    return crow::response{crow::status::BAD_REQUEST, body};
+                }
+                output_subdir_override = std::filesystem::path(json["output_subdir"].get<std::string>());
+            }
+        }
+        catch (const std::exception& ex)
+        {
+            crow::json::wvalue body;
+            body["error"] = std::string{"Invalid config JSON: "} + ex.what();
+            return crow::response{crow::status::BAD_REQUEST, body};
+        }
+    }
+
+    const auto job_id = registry_.next_id();
+    const auto uploads_root =
+        config_.output_root.empty() ? std::filesystem::path("build/uploads") : config_.output_root / "uploads";
+    std::error_code ec;
+    std::filesystem::create_directories(uploads_root, ec);
+    if (ec)
+    {
+        return crow::response{crow::status::INTERNAL_SERVER_ERROR, R"({"error":"failed to prepare upload dir"})"};
+    }
+
+    const auto target_path = uploads_root / (job_id + "-" + filename);
+    std::ofstream out(target_path, std::ios::binary);
+    out.write(header_body.data(), static_cast<std::streamsize>(header_body.size()));
+    if (!out)
+    {
+        return crow::response{crow::status::INTERNAL_SERVER_ERROR, R"({"error":"failed to save upload"})"};
+    }
+
+    // Prepare the job request
+    job_request job{};
+    job.input_path = target_path;
+    job.profile = template_config.profile;
+
+    if (!template_config.stems_filter.empty())
+    {
+        job.stems = template_config.stems_filter;
+    }
+
+    if (output_subdir_override)
+    {
+        job.output_subdir = *output_subdir_override;
+    }
+
+    job.observer.callback = [this, job_id](const job_descriptor& desc, const job_event& ev)
+    { registry_.update(job_id, desc, ev); };
+
+    const auto handle = submit_override_ ? submit_override_(std::move(job))
+                                         : (svc_ ? svc_->submit(std::move(job)) : std::unexpected("service not ready"));
+    if (!handle)
+    {
+        std::filesystem::remove(target_path, ec);
+        crow::json::wvalue body;
+        body["error"] = handle.error();
+        return crow::response{crow::status::BAD_REQUEST, body};
+    }
+
+    // Store the job handle for later status queries
+    registry_.add(job_id, *handle, target_path);
+
+    crow::json::wvalue body;
+    body["id"] = job_id;
+    return crow::response{crow::status::ACCEPTED, body};
+}
+
+crow::response server::handle_get_job(const std::string& id) const
+{
+    if (const auto state = registry_.get(id))
+    {
+        crow::json::wvalue body;
+        body["id"] = id;
+        body["status"] = to_string(state->last_event.status).data();
+        body["progress"] = state->last_event.progress;
+
+        if (!state->output_dir.empty())
+        {
+            body["output_dir"] = state->output_dir.string();
+        }
+
+        if (state->last_event.error)
+        {
+            body["error"] = *state->last_event.error;
+        }
+
+        return crow::response{crow::status::OK, body};
+    }
+    return crow::response{crow::status::NOT_FOUND, R"({"error":"job not found"})"};
+}
+
+crow::response server::handle_download(const std::string& id) const
+{
+    const auto state = registry_.get(id);
+    if (!state)
+    {
+        return crow::response{crow::status::NOT_FOUND, R"({"error":"job not found"})"};
+    }
+
+    if (state->last_event.status != job_status::completed)
+    {
+        return crow::response{crow::status::CONFLICT, R"({"error":"job not completed"})"};
+    }
+
+    if (state->output_dir.empty())
+    {
+        return crow::response{crow::status::INTERNAL_SERVER_ERROR, R"({"error":"missing output path"})"};
+    }
+
+    const auto zip_result = make_zip(state->output_dir);
+    if (!zip_result)
+    {
+        crow::json::wvalue body;
+        body["error"] = zip_result.error();
+        return crow::response{crow::status::INTERNAL_SERVER_ERROR, body};
+    }
+
+    const auto filename = "job-" + id + ".zip";
+    crow::response resp{crow::status::OK, zip_result.value()};
+    resp.set_header("Content-Type", "application/zip");
+    resp.set_header("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+    return resp;
+}
+
+void server::register_routes()
+{
+    auto& cors = app_.get_middleware<crow::CORSHandler>().global();
+    cors.origin("*")
+        .methods(crow::HTTPMethod::GET, crow::HTTPMethod::POST, crow::HTTPMethod::OPTIONS)
+        .headers("Content-Type");
+
+    CROW_ROUTE(app_, "/health")(
+        []
+        {
+            crow::json::wvalue payload;
+            payload["status"] = "ok";
+            return crow::response{crow::status::OK, payload};
+        });
+
+    CROW_ROUTE(app_, "/")(
+        []
+        {
+            crow::json::wvalue payload;
+            payload["message"] = "Welcome to the StemSmith Job Server";
+            return crow::response{crow::status::OK, payload};
+        });
+
+    CROW_ROUTE(app_, "/jobs")
+        .methods(crow::HTTPMethod::POST)([&](const crow::request& request) { return handle_post_job(request); });
+    CROW_ROUTE(app_, "/jobs")
+        .methods(crow::HTTPMethod::OPTIONS)(
+            []
+            {
+                crow::response res{crow::status::OK};
+                res.add_header("Access-Control-Allow-Origin", "*");
+                res.add_header("Access-Control-Allow-Methods", "POST, OPTIONS");
+                res.add_header("Access-Control-Allow-Headers", "Content-Type");
+                return res;
+            });
+
+    CROW_ROUTE(app_, "/jobs/<string>")([&](const std::string& job_id) { return handle_get_job(job_id); });
+
+    CROW_ROUTE(app_, "/jobs/<string>/download")([&](const std::string& job_id) { return handle_download(job_id); });
+}
+
+} // namespace stemsmith::http

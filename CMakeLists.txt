@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(stemsmith LANGUAGES CXX)
+project(stemsmith LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -51,16 +51,33 @@ file(GLOB SOURCES "${STEMSMITH_ROOT}/src/*.cpp")
 add_library(${PROJECT_NAME} ${SOURCES})
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
+add_library(stemsmith_http
+    src/http/server.cpp
+)
+
+add_library(miniz STATIC
+    thirdparty/miniz/miniz.c
+)
+
 target_include_directories(${PROJECT_NAME}
     PUBLIC
         ${STEMSMITH_INCLUDE_DIR}
         ${STEMSMITH_THIRDPARTY_DIR}
-        ${asio_SOURCE_DIR}/asio/include
         ${STEMSMITH_ROOT}/external/demucs.cpp/src
         ${STEMSMITH_ROOT}/external/demucs.cpp/vendor/libnyquist/include
     PRIVATE
         ${STEMSMITH_ROOT}/src
 )
+
+target_include_directories(stemsmith_http
+    PUBLIC
+        ${STEMSMITH_ROOT}/src
+        ${STEMSMITH_THIRDPARTY_DIR}
+        ${asio_SOURCE_DIR}/asio/include
+        ${STEMSMITH_INCLUDE_DIR}
+)
+
+target_link_libraries(stemsmith_http PRIVATE miniz ${PROJECT_NAME})
 
 target_include_directories(${PROJECT_NAME}
     SYSTEM PUBLIC
@@ -118,6 +135,7 @@ add_executable(${PROJECT_NAME}_test ${TEST_SOURCES})
 target_link_libraries(${PROJECT_NAME}_test
     PRIVATE
         ${PROJECT_NAME}
+        stemsmith_http
         GTest::gtest
 )
 
@@ -135,6 +153,13 @@ target_compile_definitions(${PROJECT_NAME}_test
 
 add_test(NAME stemsmith_test COMMAND ${PROJECT_NAME}_test)
 
+add_executable(stemsmithd src/http/stemsmithd.cpp)
+target_link_libraries(stemsmithd PRIVATE stemsmith_http)
+target_include_directories(stemsmithd PRIVATE
+    ${STEMSMITH_INCLUDE_DIR}
+    ${STEMSMITH_ROOT}/src
+)
+
 if (STEMSMITH_BUILD_EXAMPLES)
     add_executable(simple_separation_example examples/simple_separation.cpp)
     target_link_libraries(simple_separation_example PRIVATE ${PROJECT_NAME})
@@ -151,4 +176,8 @@ if (STEMSMITH_BUILD_EXAMPLES)
         ${STEMSMITH_ROOT}/examples
     )
     target_compile_definitions(observer_separation_example PRIVATE STEMSMITH_SOURCE_DIR="${STEMSMITH_ROOT}")
+
+    add_executable(http_server_example examples/http_server_example.cpp)
+    target_link_libraries(http_server_example PRIVATE ${PROJECT_NAME} stemsmith_http CURL::libcurl)
+    target_compile_definitions(http_server_example PRIVATE STEMSMITH_SOURCE_DIR="${STEMSMITH_ROOT}")
 endif ()
