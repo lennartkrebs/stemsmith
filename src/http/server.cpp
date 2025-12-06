@@ -94,29 +94,40 @@ std::string job_registry::next_id()
     ;
 }
 
-void job_registry::add(const std::string& id, job_handle handle)
+void job_registry::add(const std::string& id, job_handle handle, std::filesystem::path upload_path)
 {
     std::lock_guard lock(mutex_);
     job_state state;
     state.last_event.id = handle.id();
     state.last_event.status = job_status::queued;
     state.handle = std::move(handle);
+    state.upload_path = std::move(upload_path);
     jobs_.emplace(id, std::move(state));
 }
 
 void job_registry::update(const std::string& id, const job_descriptor& desc, const job_event& ev)
 {
-    std::lock_guard lock(mutex_);
-    const auto it = jobs_.find(id);
-    if (it == jobs_.end())
+    std::optional<std::filesystem::path> upload_to_remove;
     {
-        return;
+        std::lock_guard lock(mutex_);
+        const auto it = jobs_.find(id);
+        if (it == jobs_.end())
+        {
+            return;
+        }
+
+        it->second.last_event = ev;
+        if (ev.status == job_status::completed || ev.status == job_status::failed || ev.status == job_status::cancelled)
+        {
+            it->second.output_dir = desc.output_dir;
+            upload_to_remove = std::move(it->second.upload_path);
+        }
     }
 
-    it->second.last_event = ev;
-    if (ev.status == job_status::completed || ev.status == job_status::failed)
+    if (upload_to_remove)
     {
-        it->second.output_dir = desc.output_dir;
+        std::error_code ec;
+        std::filesystem::remove(*upload_to_remove, ec);
     }
 }
 
@@ -232,8 +243,11 @@ crow::response server::handle_post_job(const crow::request& req)
     {
         std::string lowered = content_type_part;
         std::ranges::transform(lowered, lowered.begin(), [](unsigned char c) { return std::tolower(c); });
-        if (lowered.find("audio/wav") == std::string::npos && lowered.find("audio/x-wav") == std::string::npos &&
-            lowered.find("audio/wave") == std::string::npos && lowered.find("audio/vnd.wave") == std::string::npos)
+        const bool is_wav = lowered.find("audio/wav") != std::string::npos ||
+                            lowered.find("audio/x-wav") != std::string::npos ||
+                            lowered.find("audio/wave") != std::string::npos ||
+                            lowered.find("audio/vnd.wave") != std::string::npos;
+        if (const bool is_octet_stream = lowered.find("application/octet-stream") != std::string::npos; !is_wav && !is_octet_stream)
         {
             return crow::response{crow::status::BAD_REQUEST, R"({"error":"WAV content-type required"})"};
         }
@@ -328,7 +342,7 @@ crow::response server::handle_post_job(const crow::request& req)
     }
 
     // Store the job handle for later status queries
-    registry_.add(job_id, *handle);
+    registry_.add(job_id, *handle, target_path);
 
     crow::json::wvalue body;
     body["id"] = job_id;

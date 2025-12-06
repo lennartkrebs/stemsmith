@@ -8,7 +8,7 @@ TEST(job_registry_test, adds_and_retrieves_job)
 
     http::job_registry registry;
     const auto id = registry.next_id();
-    registry.add(id, job_handle{});
+    registry.add(id, job_handle{}, std::filesystem::path("/tmp/upload.wav"));
 
     const auto state = registry.get(id);
     ASSERT_TRUE(state.has_value());
@@ -21,7 +21,7 @@ TEST(job_registry_test, updates_status_and_output_path)
 
     http::job_registry registry;
     const auto id = registry.next_id();
-    registry.add(id, job_handle{});
+    registry.add(id, job_handle{}, std::filesystem::path("/tmp/upload.wav"));
 
     job_descriptor desc;
     desc.output_dir = std::filesystem::path("/tmp/output");

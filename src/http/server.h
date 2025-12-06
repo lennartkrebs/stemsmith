@@ -33,13 +33,14 @@ struct job_state
     job_handle handle;
     job_event last_event{};
     std::filesystem::path output_dir{};
+    std::filesystem::path upload_path{};
 };
 
 class job_registry
 {
 public:
     [[nodiscard]] std::string next_id();
-    void add(const std::string& id, job_handle handle);
+    void add(const std::string& id, job_handle handle, std::filesystem::path upload_path);
     void update(const std::string& id, const job_descriptor& desc, const job_event& ev);
 
     [[nodiscard]] std::optional<job_state> get(const std::string& id) const;

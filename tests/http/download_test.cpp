@@ -40,7 +40,7 @@ TEST(http_download_test, returns_conflict_if_not_completed)
 
     auto& reg = server_test_hook::registry(srv);
     const auto id = reg.next_id();
-    reg.add(id, stemsmith::job_handle{});
+    reg.add(id, stemsmith::job_handle{}, std::filesystem::path{});
 
     stemsmith::job_descriptor desc;
     stemsmith::job_event ev;
@@ -59,7 +59,7 @@ TEST(http_download_test, returns_zip_when_completed)
 
     auto& reg = server_test_hook::registry(srv);
     const auto id = reg.next_id();
-    reg.add(id, stemsmith::job_handle{});
+    reg.add(id, stemsmith::job_handle{}, std::filesystem::path{});
 
     const auto tmp_dir = std::filesystem::temp_directory_path() / "stemsmith-http-zip";
     std::filesystem::create_directories(tmp_dir);
