@@ -6,12 +6,13 @@
 
 body {
   margin: 0;
-  font-family: var(--font);
+  font-family: var(--font), monospace;
   background: radial-gradient(circle at 20% 20%, rgba(124, 58, 237, 0.12), transparent 25%),
     radial-gradient(circle at 80% 0%, rgba(34, 211, 238, 0.12), transparent 25%),
     var(--bg);
   color: var(--text);
   min-height: 100vh;
+  font-weight: 400;
 }
 
 a {
@@ -126,13 +127,206 @@ a {
   margin-top: var(--space-4);
 }
 
+.config-panel {
+  margin-top: var(--space-4);
+  background: var(--panel-alt);
+}
+
+.config-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.config-row label {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.config-row select {
+  display: none;
+}
+
+.select-box {
+  position: relative;
+}
+
+.select-button {
+  width: 100%;
+  text-align: left;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  outline: none;
+  box-shadow: none;
+  font-family: var(--font), monospace;
+}
+
+.select-button:hover {
+  border-color: rgba(124, 58, 237, 0.6);
+}
+
+.select-arrow {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.select-options {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  list-style: none;
+  padding: var(--space-2);
+  margin: 0;
+  z-index: 5;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.select-options li {
+  margin: 0;
+}
+
+.select-options li + li {
+  margin-top: var(--space-2);
+}
+
+.select-option {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  padding: var(--space-3) var(--space-2);
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: var(--font);
+}
+
+.select-option:hover,
+.select-option.selected {
+  background: rgba(124, 58, 237, 0.1);
+  color: var(--text);
+}
+
+.config-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stem-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--space-2);
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  user-select: none;
+  background: var(--panel);
+  color: var(--muted);
+  min-height: 36px;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: none;
+  transform: none;
+  position: relative;
+  box-shadow: none;
+}
+
+.chip:focus,
+.chip:active,
+.chip:focus-visible {
+  outline: none;
+  box-shadow: none;
+  transform: none;
+  top: 0;
+}
+
+.chip:hover {
+  transform: none;
+  outline: none;
+  box-shadow: none;
+  top: 0;
+  border-color: rgba(124, 58, 237, 0.4);
+}
+
+.chip,
+.chip:hover,
+.chip:active,
+.chip:focus,
+.chip:focus-visible {
+  transition: none !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.chip-active {
+  border-color: rgba(124, 58, 237, 0.6);
+  background: rgba(124, 58, 237, 0.08);
+  color: var(--text);
+  transition: none;
+}
+
+.chip-indicator {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: rgba(124, 58, 237, 0.08);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: none;
+  transition: none;
+}
+
+.chip.chip-active .chip-indicator {
+  border-color: rgba(124, 58, 237, 0.8);
+  background: rgba(124, 58, 237, 0.4);
+}
+
+.chip-indicator::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: transparent;
+  opacity: 0;
+  transition: none;
+}
+
+.chip.chip-active .chip-indicator::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
 button {
   cursor: pointer;
   border: none;
   border-radius: 8px;
   padding: var(--space-3) var(--space-4);
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 500;
+  font-family: var(--font);
   transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
 }
 
@@ -158,6 +352,7 @@ button.link {
   color: var(--accent-2);
   padding: 0;
 }
+
 
 button:not(:disabled):hover {
   transform: translateY(-1px);

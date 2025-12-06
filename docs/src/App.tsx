@@ -4,6 +4,8 @@ import { EndpointSelector, loadSavedEndpoint } from "./components/EndpointSelect
 import { Toast } from "./components/Toast";
 import { useUpload } from "./hooks/useUpload";
 import { JobCard } from "./components/JobCard";
+import { JobConfigForm, DEFAULT_CONFIG } from "./components/JobConfig";
+import type { JobConfig } from "./types";
 
 const DEFAULT_ENDPOINT = "http://localhost:8345";
 
@@ -12,6 +14,7 @@ export default function App() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [jobs, setJobs] = useState<string[]>([]);
   const [toast, setToast] = useState<string | null>(null);
+  const [jobConfig, setJobConfig] = useState<JobConfig>(DEFAULT_CONFIG);
 
   const { upload, uploading, error: uploadError } = useUpload(apiBase);
 
@@ -24,7 +27,7 @@ export default function App() {
   const handleUpload = async () => {
     if (!selectedFile) return;
     try {
-      const result = await upload(selectedFile);
+      const result = await upload(selectedFile, jobConfig);
       setJobs((prev) => [result.id, ...prev]);
       setToast(null);
     } catch (err) {
@@ -50,6 +53,7 @@ export default function App() {
       <main className="layout">
         <section className="panel">
           <UploadArea file={selectedFile} onFileChange={setSelectedFile} disabled={uploading} />
+          <JobConfigForm value={jobConfig} onChange={setJobConfig} />
           <div className="actions">
             <button className="secondary" onClick={reset} disabled={!selectedFile || uploading}>
               Reset
