@@ -16,8 +16,12 @@ export function createApiClient({ baseUrl }: ApiClientOptions) {
     // Force the part MIME to audio/wav for consistency.
     const wav = new File([file], file.name, { type: "audio/wav" });
     form.append("file", wav);
+    console.debug("[upload] sending file", wav);
+
     if (config) {
-      form.append("config", JSON.stringify(config));
+      const cfg = JSON.stringify(config);
+      console.debug("[upload] sending config", cfg);
+      form.append("config", cfg);
     }
 
     const resp = await fetch(url("/jobs"), {

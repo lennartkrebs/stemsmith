@@ -6,7 +6,7 @@
 
 body {
   margin: 0;
-  font-family: var(--font), monospace;
+  font-family: var(--font);
   background: radial-gradient(circle at 20% 20%, rgba(124, 58, 237, 0.12), transparent 25%),
     radial-gradient(circle at 80% 0%, rgba(34, 211, 238, 0.12), transparent 25%),
     var(--bg);
@@ -166,11 +166,22 @@ a {
   cursor: pointer;
   outline: none;
   box-shadow: none;
-  font-family: var(--font), monospace;
+  font-family: var(--font);
+  transition: none !important;
+  transform: none !important;
+  position: relative;
 }
 
+.select-button:focus,
+.select-button:active,
+.select-button:focus-visible,
 .select-button:hover {
-  border-color: rgba(124, 58, 237, 0.6);
+  border-color: rgba(124, 58, 237, 0.4);
+  transition: none !important;
+  outline: none;
+  box-shadow: none;
+  transform: none !important;
+  top: 0;
 }
 
 .select-arrow {
@@ -191,6 +202,8 @@ a {
   margin: 0;
   z-index: 5;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  transition: none !important;
+  transform: none !important;
 }
 
 .select-options li {
@@ -211,6 +224,7 @@ a {
   border-radius: 6px;
   cursor: pointer;
   font-family: var(--font);
+  transition: none;
 }
 
 .select-option:hover,

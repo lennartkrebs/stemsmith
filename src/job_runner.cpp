@@ -113,9 +113,9 @@ std::expected<job_handle, std::string> job_runner::submit(job_request request)
     overrides.profile = request.profile;
     overrides.stems_filter = request.stems;
 
-    std::filesystem::path output_dir;
-    output_dir = request.output_subdir ? engine_.output_root() / *request.output_subdir
-                                       : engine_.fallback_output_dir(request.input_path);
+    const std::filesystem::path output_dir = request.output_subdir
+                                           ? engine_.output_root() / *request.output_subdir
+                                           : engine_.fallback_output_dir(request.input_path);
 
     auto add_result = catalog_.add_file(request.input_path, overrides, output_dir);
     if (!add_result)
@@ -127,7 +127,7 @@ std::expected<job_handle, std::string> job_runner::submit(job_request request)
     const auto context = std::make_shared<job_context>();
     context->job = job;
     context->output_dir = job.output_dir;
-    auto shared_future = context->promise.get_future().share();
+    const auto shared_future = context->promise.get_future().share();
 
     {
         std::lock_guard lock(mutex_);

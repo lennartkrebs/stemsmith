@@ -26,27 +26,21 @@ interface Props {
 }
 
 export function JobConfigForm({ value, onChange }: Props) {
-  const [model, setModel] = useState<ModelProfileKey>(value.model);
-  const [stems, setStems] = useState<string[]>(value.stems);
+  const { model, stems } = value;
   const [modelOpen, setModelOpen] = useState(false);
 
   const availableStems = useMemo(() => PROFILE_STEMS[model], [model]);
 
   const toggleStem = (stem: string) => {
-    setStems((prev) => {
-      const next = prev.includes(stem) ? prev.filter((s) => s !== stem) : [...prev, stem];
-      onChange({ model, stems: next });
-      return next;
-    });
+    const next = stems.includes(stem) ? stems.filter((s) => s !== stem) : [...stems, stem];
+    onChange({ model, stems: next });
   };
 
   const changeModel = (next: ModelProfileKey) => {
-    setModel(next);
     const nextAvailable = PROFILE_STEMS[next];
     // prune stems not in the profile
     const filtered = stems.filter((s) => nextAvailable.includes(s));
     onChange({ model: next, stems: filtered });
-    setStems(filtered);
     setModelOpen(false);
   };
 
