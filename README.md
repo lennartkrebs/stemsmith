@@ -27,6 +27,8 @@ docker run --rm -it -p 8345:8345 -v "$HOME/.stemsmith:/root/.stemsmith" -e OMP_N
 # docker run --rm -it -p 9000:9000 -v "$HOME/.stemsmith:/root/.stemsmith" -e OMP_NUM_THREADS=8 stemsmithd --workers=2 --port 9000 --cache-root /root/.stemsmith/cache --output-root /root/.stemsmith/output
 ```
 
+Frontend: once `stemsmithd` is running, open the GitHub Pages UI at https://lennartkrebs.github.io/stemsmith (defaults to `http://localhost:8345`, configurable in the UI). Upload a WAV, watch progress, and download stems.
+
 **Note:** running many jobs concurrently will saturate CPU; adjust `--workers` or queue jobs accordingly.
 
 ### CPU tuning
