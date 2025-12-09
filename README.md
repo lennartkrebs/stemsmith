@@ -2,7 +2,7 @@
 [![CI](https://github.com/lennartkrebs/stemsmith/actions/workflows/ci.yml/badge.svg)](https://github.com/lennartkrebs/stemsmith/actions/workflows/ci.yml)
 [![Pages](https://github.com/lennartkrebs/stemsmith/actions/workflows/deploy-frontend.yml/badge.svg)](https://github.com/lennartkrebs/stemsmith/actions/workflows/deploy-frontend.yml)
 
-Stemsmith is a C++20 library and service facade for Demucs-powered music stem separation. It wraps model caching, audio I/O, and job orchestration behind a small API that can be embedded in apps or invoked from examples. Inference is powered by the bundled demucscpp backend.
+Are you also tired of SaaS stem splitters that meter you by the minute or cap tracks per month? Stemsmith is the “runs on your box” answer: a C++20 library and service facade for Demucs-powered music stem separation. It wraps model caching, audio I/O, and job orchestration behind a small API that can be embedded in apps or invoked from examples. Inference is powered by the bundled demucscpp backend. It may not be the fastest on every setup, but the only thing it costs you is time, not surprise invoices.
 
 ## Build
 ```bash
@@ -22,12 +22,20 @@ DOCKER_BUILDKIT=1 docker build -t stemsmithd .
 
 Run the daemon, exposing port 8345 and persisting cache/output to your host:
 ```bash
-docker run --rm -it -p 8345:8345 -v "$HOME/.stemsmith:/root/.stemsmith" stemsmithd
-# override port/paths if needed:
-# docker run --rm -it -p 9000:9000 -v "$HOME/.stemsmith:/root/.stemsmith" stemsmithd --port 9000 --cache-root /root/.stemsmith/cache --output-root /root/.stemsmith/output
+docker run --rm -it -p 8345:8345 -v "$HOME/.stemsmith:/root/.stemsmith" -e OMP_NUM_THREADS=4 stemsmithd --workers=4
+# override port/paths/threads if needed:
+# docker run --rm -it -p 9000:9000 -v "$HOME/.stemsmith:/root/.stemsmith" -e OMP_NUM_THREADS=8 stemsmithd --workers=2 --port 9000 --cache-root /root/.stemsmith/cache --output-root /root/.stemsmith/output
 ```
 
 **Note:** running many jobs concurrently will saturate CPU; adjust `--workers` or queue jobs accordingly.
+
+### CPU tuning
+Set `OMP_NUM_THREADS` to cap per-job threads and adjust `--workers` so `workers × OMP_NUM_THREADS` roughly matches your performance cores (to avoid oversubscription). The server defaults workers to roughly half the available hardware threads (clamped to at least 1) when `--workers` is omitted or set to 0:
+
+- M1 Pro (8 perf cores): try `OMP_NUM_THREADS=4 --workers 2` or `OMP_NUM_THREADS=8 --workers 1`.
+- M4 Max (16 perf cores): try `OMP_NUM_THREADS=4 --workers 4` or `OMP_NUM_THREADS=8 --workers 2`.
+
+If you see slowdowns, lower `--workers` or `OMP_NUM_THREADS` to avoid oversubscribing cores.
 
 ## Examples
 - `simple_separation_example`: single job with progress printed to stdout.

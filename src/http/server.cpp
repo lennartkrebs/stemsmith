@@ -86,12 +86,19 @@ std::expected<std::string, std::string> make_zip(const std::filesystem::path& ro
     mz_free(buffer);
     return out;
 }
+
+std::size_t compute_worker_count(const std::optional<std::size_t>& worker_count)
+{
+    const auto hw_threads = std::max<std::size_t>(1, std::thread::hardware_concurrency());
+    const auto default_workers = std::max<std::size_t>(std::size_t{1}, hw_threads / 2);
+    const auto desired = worker_count ? *worker_count : default_workers;
+    return std::clamp(desired, std::size_t{1}, hw_threads);
+}
 } // namespace
 
 std::string job_registry::next_id()
 {
     return std::to_string(next_id_.fetch_add(1));
-    ;
 }
 
 void job_registry::add(const std::string& id, job_handle handle, std::filesystem::path upload_path)
@@ -180,7 +187,7 @@ void server::run()
     // Maybe assert rather than defaulting?
     runtime.cache.root = config_.cache_root.empty() ? "build/model_cache" : config_.cache_root;
     runtime.output_root = config_.output_root.empty() ? "build/output" : config_.output_root;
-    runtime.worker_count = config_.worker_count;
+    runtime.worker_count = compute_worker_count(config_.worker_count);
 
     // Use our own signal handling; Crow's default installs SIGINT/SIGTERM hooks.
     app_.signal_clear();

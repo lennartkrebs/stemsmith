@@ -25,7 +25,7 @@ struct config
     std::uint16_t port{8345};
     std::filesystem::path cache_root{};
     std::filesystem::path output_root{};
-    std::size_t worker_count{std::thread::hardware_concurrency()};
+    std::optional<size_t> worker_count{std::nullopt};
 };
 
 struct job_state

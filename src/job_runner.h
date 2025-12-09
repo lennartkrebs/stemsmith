@@ -51,10 +51,10 @@ public:
                std::size_t worker_count = std::thread::hardware_concurrency(),
                std::function<void(const job_descriptor&, const job_event&)> event_callback = {});
 
-    job_runner(separation_engine engine,
-               job_template defaults = {},
-               std::size_t worker_count = std::thread::hardware_concurrency(),
-               std::function<void(const job_descriptor&, const job_event&)> event_callback = {});
+    explicit job_runner(separation_engine engine,
+                        job_template defaults = {},
+                        std::size_t worker_count = std::thread::hardware_concurrency(),
+                        std::function<void(const job_descriptor&, const job_event&)> event_callback = {});
 
     std::expected<job_handle, std::string> submit(job_request request);
 

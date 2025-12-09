@@ -250,10 +250,11 @@ int main(int argc, char* argv[])
     stemsmith::http::server srv(cfg);
     srv.start();
 
+    const auto workers = cfg.worker_count.has_value() ? *cfg.worker_count : std::thread::hardware_concurrency();
     std::cout << "stemsmithd listening on " << cfg.bind_address << ":" << cfg.port << "\n";
     std::cout << "cache_root=" << cfg.cache_root << "\n";
     std::cout << "output_root=" << cfg.output_root << "\n";
-    std::cout << "workers=" << cfg.worker_count << "\n";
+    std::cout << "workers=" << workers << "\n";
     std::cout << "Press Ctrl+C to stop\n";
 
     std::signal(SIGINT, signal_handler);
