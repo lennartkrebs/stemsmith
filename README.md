@@ -2,7 +2,7 @@
 [![CI](https://github.com/lennartkrebs/stemsmith/actions/workflows/ci.yml/badge.svg)](https://github.com/lennartkrebs/stemsmith/actions/workflows/ci.yml)
 [![Pages](https://github.com/lennartkrebs/stemsmith/actions/workflows/deploy-frontend.yml/badge.svg)](https://github.com/lennartkrebs/stemsmith/actions/workflows/deploy-frontend.yml)
 
-Self-hosted Demucs stem splitting. Ships as a C++20 library, a Dockerized HTTP service (`stemsmithd`), and a small web UI. No SaaS meter—just your hardware; keep your wallet and let the cloud AI vendors keep charging $0.04 a minute to run the same model slower.
+Self-hosted Demucs stem splitting. Ships as a C++20 library, a Dockerized HTTP service (`stemsmithd`), and a small web UI. No SaaS meter, just your (hopefully fast) hardware; at least keep your wallet and let the cloud AI vendors keep charging $10000 a minute to run basically the same model faster.
 
 <p align="center">
   <img src="docs/demo.gif" alt="stemsmith demo" width="720">
