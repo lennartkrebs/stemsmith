@@ -36,6 +36,7 @@ model_session_pool& model_session_pool::operator=(model_session_pool&& other) no
         buckets_ = std::move(other.buckets_);
         factory_ = std::move(other.factory_);
     }
+
     return *this;
 }
 
@@ -62,6 +63,7 @@ model_session_pool::session_handle& model_session_pool::session_handle::operator
         session_ = std::move(other.session_);
         other.pool_ = nullptr;
     }
+
     return *this;
 }
 

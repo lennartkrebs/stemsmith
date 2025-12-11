@@ -39,7 +39,7 @@ job_catalog::job_catalog(job_template base_config, exists_function exists_provid
 
 std::expected<std::size_t, std::string> job_catalog::add_file(const std::filesystem::path& path,
                                                               const job_overrides& overrides,
-                                                              std::filesystem::path output_dir)
+                                                              const std::filesystem::path& output_dir)
 {
     if (path.empty())
     {

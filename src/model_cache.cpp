@@ -26,6 +26,7 @@ std::expected<bool, std::string> file_ready(const std::filesystem::path& path, c
     {
         return false;
     }
+
     if (ec)
     {
         return std::unexpected("Failed to inspect model file: " + ec.message());
@@ -38,6 +39,7 @@ std::expected<bool, std::string> file_ready(const std::filesystem::path& path, c
         {
             return std::unexpected("Failed to read model file size: " + ec.message());
         }
+
         if (size != entry.size_bytes)
         {
             return false;
@@ -49,11 +51,13 @@ std::expected<bool, std::string> file_ready(const std::filesystem::path& path, c
     {
         return std::unexpected(checksum.error());
     }
+
     if (!checksum.value())
     {
         std::filesystem::remove(path, ec);
         return false;
     }
+
     return true;
 }
 } // namespace
@@ -74,6 +78,7 @@ std::expected<model_cache, std::string> model_cache::create(std::filesystem::pat
     {
         return std::unexpected(manifest.error());
     }
+
     return model_cache{std::move(cache_root),
                        std::move(fetcher),
                        std::move(manifest.value()),
@@ -140,6 +145,7 @@ std::expected<void, std::string> model_cache::purge_all() const
     {
         return std::unexpected("Failed to purge cache root: " + ec.message());
     }
+
     return {};
 }
 
@@ -151,6 +157,7 @@ model_cache::profile_state& model_cache::state_for(model_profile_id profile)
         auto state = std::make_unique<profile_state>();
         it = profile_states_.emplace(profile, std::move(state)).first;
     }
+
     return *it->second;
 }
 
@@ -164,6 +171,7 @@ std::expected<model_handle, std::string> model_cache::hydrate(model_profile_id p
     {
         return std::unexpected(ready.error());
     }
+
     if (ready.value())
     {
         return model_handle{profile, path, entry.sha256, entry.size_bytes, true};
@@ -223,6 +231,7 @@ std::expected<model_handle, std::string> model_cache::download_and_stage(model_p
             std::filesystem::remove(staging, ec);
             return std::unexpected("Failed to inspect downloaded weights: " + ec.message());
         }
+
         if (downloaded_size != entry.size_bytes)
         {
             std::filesystem::remove(staging, ec);
@@ -236,6 +245,7 @@ std::expected<model_handle, std::string> model_cache::download_and_stage(model_p
         std::filesystem::remove(staging, ec);
         return std::unexpected(ready.error());
     }
+
     if (!ready.value())
     {
         std::filesystem::remove(staging, ec);

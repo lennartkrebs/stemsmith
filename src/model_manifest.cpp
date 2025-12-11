@@ -19,6 +19,7 @@ std::string expand_template(std::string_view tpl, std::string_view placeholder, 
     {
         result.replace(pos, placeholder.size(), value);
     }
+
     return result;
 }
 } // namespace

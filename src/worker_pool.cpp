@@ -90,7 +90,9 @@ bool worker_pool::cancel(std::size_t job_id, std::string reason)
         {
             return false;
         }
+
         emit_cancelled(queued->id, queued->cancellation);
+
         return true;
     }
 
@@ -183,6 +185,7 @@ std::string worker_pool::cancellation_reason(const std::shared_ptr<cancellation_
     {
         return kDefaultCancellationReason;
     }
+
     return state->reason;
 }
 
@@ -207,6 +210,7 @@ void worker_pool::worker_loop()
                 {
                     break;
                 }
+
                 continue;
             }
 

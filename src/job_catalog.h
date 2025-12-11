@@ -31,7 +31,7 @@ public:
 
     std::expected<std::size_t, std::string> add_file(const std::filesystem::path& path,
                                                      const job_overrides& overrides,
-                                                     std::filesystem::path output_dir);
+                                                     const std::filesystem::path& output_dir);
 
     [[nodiscard]] const std::vector<job_descriptor>& jobs() const noexcept
     {

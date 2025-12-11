@@ -48,15 +48,17 @@ std::expected<model_handle, std::string> service::ensure_model_ready(model_profi
     {
         return std::unexpected("Model cache is not available");
     }
+
     return cache_->ensure_ready(profile);
 }
 
-std::expected<std::unique_ptr<service>, std::string> service::create(runtime_config runtime, job_template defaults)
+std::expected<std::unique_ptr<service>, std::string> service::create(runtime_config runtime, const job_template& defaults)
 {
     if (runtime.cache.root.empty())
     {
         return std::unexpected("cache_root is required");
     }
+
     if (runtime.output_root.empty())
     {
         return std::unexpected("output_root is required");
@@ -86,6 +88,7 @@ std::expected<std::unique_ptr<service>, std::string> service::create(runtime_con
     {
         return std::unexpected(cache_result.error());
     }
+
     auto cache_ptr = std::make_shared<model_cache>(std::move(cache_result.value()));
 
     auto runner = std::make_unique<job_runner>(*cache_ptr,

@@ -92,7 +92,7 @@ public:
     using event_callback = std::function<void(const job_descriptor&, const job_event&)>;
 
     static std::expected<std::unique_ptr<service>, std::string> create(runtime_config runtime,
-                                                                       job_template defaults = {});
+                                                                       const job_template& defaults = {});
 
     [[nodiscard]] std::expected<job_handle, std::string> submit(job_request request) const;
     [[nodiscard]] std::expected<model_handle, std::string> ensure_model_ready(model_profile_id profile) const;
