@@ -5,7 +5,7 @@
 Self-hosted Demucs stem splitting. Ships as a C++20 library, a Dockerized HTTP service (`stemsmithd`), and a small web UI. No SaaS meter, just your (hopefully fast) hardware; at least keep your wallet and let the cloud AI vendors keep charging $10000 a minute to run basically the same model faster.
 
 <p align="center">
-  <img src="docs/demo.gif" alt="stemsmith demo" width="720">
+  <img src="frontend/demo.gif" alt="stemsmith demo" width="720">
 </p>
 
 ## Quick start (Docker + frontend)
